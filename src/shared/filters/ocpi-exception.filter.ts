@@ -12,7 +12,10 @@ import { Response } from 'express'
 import { ZodError } from 'zod'
 import { ZodSerializationException } from 'nestjs-zod'
 import { OcpiException } from '@/shared/exceptions/ocpi.exceptions'
-import { createOcpiErrorResponse } from '@/ocpi/v2_2_1/common/ocpi-envelope'
+import {
+  createOcpiErrorResponse,
+  OcpiStatusCode,
+} from '@/ocpi/v2_2_1/common/ocpi-envelope'
 
 /**
  * Global exception filter that ensures all OCPI endpoints return
@@ -47,7 +50,7 @@ export class OcpiExceptionFilter implements ExceptionFilter {
     }
 
     // OCPI endpoint error handling
-    let statusCode: number
+    let statusCode: OcpiStatusCode
     let httpStatusCode: number
     let message: string
 

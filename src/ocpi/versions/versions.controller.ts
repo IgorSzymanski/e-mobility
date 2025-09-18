@@ -15,7 +15,7 @@ export class VersionsController {
   listVersions(@Param() params: RoleParamDto) {
     const { role } = params
     const versionCatalog = this.versionRegistry.getVersionCatalog()
-    const roleVersions = versionCatalog[role as OcpiRole]
+    const roleVersions = versionCatalog[role]
 
     if (!roleVersions) {
       throw new OcpiInvalidParametersException(`Invalid role: ${role}`)

@@ -73,8 +73,8 @@ This project uses PostgreSQL with Prisma ORM. For development, use Docker:
 ### Database Setup
 1. Copy `.env.example` to `.env`
 2. Start the database: `pnpm docker:dev:up`
-3. Run Prisma migrations: `npx prisma migrate dev`
-4. Optional: Generate Prisma client: `npx prisma generate`
+3. Run Prisma migrations: `pnpx prisma migrate dev`
+4. Optional: Generate Prisma client: `pnpx prisma generate`
 
 ### Database Configuration
 - **Host**: localhost

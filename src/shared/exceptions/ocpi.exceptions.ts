@@ -1,18 +1,34 @@
 // src/shared/exceptions/ocpi.exceptions.ts
 import { HttpException, HttpStatus } from '@nestjs/common'
 
+export type OcpiStatusCode =
+  | 1000
+  | 2000
+  | 2001
+  | 2002
+  | 2003
+  | 2004
+  | 3000
+  | 3001
+  | 3002
+  | 3003
+  | 4000
+  | 4001
+  | 4002
+  | 4003
+
 /**
  * Base class for OCPI-compliant exceptions that includes both HTTP status codes
  * and OCPI status codes as defined in OCPI 2.2.1 specification section 5.
  */
 export abstract class OcpiException extends HttpException {
-  public readonly ocpiStatusCode: number
+  public readonly ocpiStatusCode: OcpiStatusCode
   public readonly timestamp: string
 
   constructor(
     message: string,
     httpStatusCode: HttpStatus,
-    ocpiStatusCode: number,
+    ocpiStatusCode: OcpiStatusCode,
   ) {
     super(
       {
@@ -32,7 +48,7 @@ export abstract class OcpiException extends HttpException {
  * sent by a client where the client did something wrong.
  */
 export abstract class OcpiClientException extends OcpiException {
-  constructor(message: string, ocpiStatusCode: number) {
+  constructor(message: string, ocpiStatusCode: OcpiStatusCode) {
     super(message, HttpStatus.BAD_REQUEST, ocpiStatusCode)
   }
 }
@@ -42,7 +58,7 @@ export abstract class OcpiClientException extends OcpiException {
  * in the server. The message was syntactically correct but could not be processed.
  */
 export abstract class OcpiServerException extends OcpiException {
-  constructor(message: string, ocpiStatusCode: number) {
+  constructor(message: string, ocpiStatusCode: OcpiStatusCode) {
     super(message, HttpStatus.INTERNAL_SERVER_ERROR, ocpiStatusCode)
   }
 }
@@ -51,7 +67,7 @@ export abstract class OcpiServerException extends OcpiException {
  * OCPI Hub Error (4xxx range) - Errors that a Hub encounters while routing messages.
  */
 export abstract class OcpiHubException extends OcpiException {
-  constructor(message: string, ocpiStatusCode: number) {
+  constructor(message: string, ocpiStatusCode: OcpiStatusCode) {
     super(message, HttpStatus.BAD_GATEWAY, ocpiStatusCode)
   }
 }

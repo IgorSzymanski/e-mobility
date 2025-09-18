@@ -1,7 +1,23 @@
 // ocpi/v2_2_1/common/ocpi-envelope.ts
+export type OcpiStatusCode =
+  | 1000
+  | 2000
+  | 2001
+  | 2002
+  | 2003
+  | 2004
+  | 3000
+  | 3001
+  | 3002
+  | 3003
+  | 4000
+  | 4001
+  | 4002
+  | 4003
+
 export type OcpiResponse<T> = Readonly<{
   data?: T
-  status_code: number
+  status_code: OcpiStatusCode
   status_message?: string
   timestamp: string
 }>
@@ -12,7 +28,7 @@ export type OcpiResponse<T> = Readonly<{
  */
 export function createOcpiResponse<T>(
   data?: T,
-  statusCode = 1000,
+  statusCode: OcpiStatusCode = 1000,
   statusMessage = 'Success',
 ): OcpiResponse<T> {
   return {
@@ -34,7 +50,7 @@ export function createOcpiSuccessResponse<T>(data?: T): OcpiResponse<T> {
  * Creates an OCPI-compliant error response
  */
 export function createOcpiErrorResponse(
-  statusCode: number,
+  statusCode: OcpiStatusCode,
   statusMessage: string,
 ): OcpiResponse<null> {
   // According to OCPI spec, error responses may omit data field or set it to null
@@ -44,5 +60,5 @@ export function createOcpiErrorResponse(
     status_code: statusCode,
     status_message: statusMessage,
     timestamp: new Date().toISOString(),
-  } as OcpiResponse<null>
+  }
 }
