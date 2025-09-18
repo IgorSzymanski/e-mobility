@@ -139,3 +139,11 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format for all 
 - **Use timestamps for state tracking** - Fields like `activatedAt`, `deactivatedAt`, `usedAt`, `revokedAt` provide more valuable information than simple boolean flags
 - **Design for auditability** - DateTime fields enable better tracking of when state changes occurred
 - **Implicit state from presence** - A null `usedAt` field implies unused state, a populated field implies used state
+
+## Immutable Code Guidelines
+- **Avoid mutable variable declarations** - Never use `var` or `let` keywords; prefer `const` for all declarations
+- **Avoid mutating methods** - Never use methods like `Array.push()`, `Array.pop()`, `Array.splice()`, or direct property assignment
+- **Use immutable array operations** - Prefer methods like `[...array, newItem]`, `array.filter()`, `array.map()`, `array.concat()`
+- **Use immutable object operations** - Prefer spread syntax `{...object, newProp: value}` over direct property assignment
+- **Functional programming principles** - Write pure functions that don't modify input parameters and always return new values
+- **Benefits of immutability** - Prevents side effects, makes code more predictable, easier to test, and reduces bugs
