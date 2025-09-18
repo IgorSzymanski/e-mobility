@@ -1,6 +1,6 @@
 // src/ocpi/versions/versions.controller.ts
 import { Controller, Get, Query, Param } from '@nestjs/common'
-import { versionCatalog, OcpiRole } from './version-registry'
+import { VersionRegistryService, OcpiRole } from './version-registry'
 import type { RoleParamDto, VersionDetailsQueryDto } from './dto/versions.dto'
 import { createOcpiSuccessResponse } from '@/ocpi/v2_2_1/common/ocpi-envelope'
 import {
@@ -10,9 +10,11 @@ import {
 
 @Controller('/ocpi/:role')
 export class VersionsController {
+  constructor(private readonly versionRegistry: VersionRegistryService) {}
   @Get('/versions')
   listVersions(@Param() params: RoleParamDto) {
     const { role } = params
+    const versionCatalog = this.versionRegistry.getVersionCatalog()
     const roleVersions = versionCatalog[role as OcpiRole]
 
     if (!roleVersions) {
@@ -35,6 +37,7 @@ export class VersionsController {
     const { role } = params
     const { version } = query
 
+    const versionCatalog = this.versionRegistry.getVersionCatalog()
     const roleVersions = versionCatalog[role as OcpiRole]
     const versionDetails = roleVersions.find((v) => v.version === version)
 

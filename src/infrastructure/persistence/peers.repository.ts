@@ -8,12 +8,16 @@ import {
   OcpiModuleIdentifier,
   OcpiRole,
 } from '@prisma/client'
+import { OcpiConfigService } from '@/shared/config/ocpi.config'
 import type { CredentialsDto } from '@/ocpi/v2_2_1/credentials/dto/credentials.dto'
 
 @Injectable()
 export class PeersRepository {
   readonly #db: PrismaClient
-  constructor(db: PrismaClient) {
+  constructor(
+    db: PrismaClient,
+    private readonly ocpiConfig: OcpiConfigService,
+  ) {
     this.#db = db
   }
 
@@ -131,7 +135,7 @@ export class PeersRepository {
     // You may compute per-tenant token C if you run multi-tenant.
     return Object.freeze({
       token: '<your-current-C-for-this-peer>',
-      url: 'https://you.example.com/ocpi/versions',
+      url: `${this.ocpiConfig.baseUrl}/ocpi/versions`,
       roles: [
         {
           role: 'CPO',

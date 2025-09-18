@@ -106,19 +106,19 @@ describe('OCPI Versions Controller (e2e)', () => {
             endpoints: expect.arrayContaining([
               {
                 identifier: 'versions',
-                url: 'https://you.example/ocpi/emsp/2.3.0/versions',
+                url: expect.stringMatching(/\/ocpi\/emsp\/2\.3\.0\/versions$/),
               },
               {
                 identifier: 'credentials',
-                url: 'https://you.example/ocpi/emsp/2.3.0/credentials',
+                url: expect.stringMatching(/\/ocpi\/emsp\/2\.3\.0\/credentials$/),
               },
               {
                 identifier: 'commands',
-                url: 'https://you.example/ocpi/emsp/2.3.0/commands',
+                url: expect.stringMatching(/\/ocpi\/emsp\/2\.3\.0\/commands$/),
               },
               {
                 identifier: 'sessions',
-                url: 'https://you.example/ocpi/emsp/2.3.0/sessions',
+                url: expect.stringMatching(/\/ocpi\/emsp\/2\.3\.0\/sessions$/),
               },
             ]),
           })
@@ -137,7 +137,7 @@ describe('OCPI Versions Controller (e2e)', () => {
             endpoints: expect.arrayContaining([
               {
                 identifier: 'versions',
-                url: 'https://you.example/ocpi/emsp/2.2.1/versions',
+                url: expect.stringMatching(/\/ocpi\/emsp\/2\.2\.1\/versions$/),
               },
             ]),
           })

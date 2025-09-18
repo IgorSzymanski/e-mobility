@@ -1,4 +1,7 @@
 // src/ocpi/versions/version-registry.ts
+import { Injectable } from '@nestjs/common'
+import { OcpiConfigService } from '@/shared/config/ocpi.config'
+
 export type OcpiVersion = '2.2.1' | '2.3.0'
 export type OcpiRole = 'cpo' | 'emsp'
 
@@ -24,55 +27,69 @@ export type VersionCatalog = {
   readonly [role in OcpiRole]: ReadonlyArray<VersionDetails>
 }
 
-// Build dynamically from config at boot, or generate from actual controllers.
-export const versionCatalog: VersionCatalog = Object.freeze({
-  emsp: [
-    {
-      version: '2.3.0',
-      endpoints: [
+@Injectable()
+export class VersionRegistryService {
+  constructor(private readonly ocpiConfig: OcpiConfigService) {}
+
+  getVersionCatalog(): VersionCatalog {
+    return Object.freeze({
+      emsp: [
         {
-          identifier: 'versions',
-          url: 'https://you.example/ocpi/emsp/2.3.0/versions',
+          version: '2.3.0',
+          endpoints: [
+            {
+              identifier: 'versions',
+              url: this.ocpiConfig.getEndpointUrl('emsp', '2.3.0', 'versions'),
+            },
+            {
+              identifier: 'credentials',
+              url: this.ocpiConfig.getEndpointUrl(
+                'emsp',
+                '2.3.0',
+                'credentials',
+              ),
+            },
+            {
+              identifier: 'commands',
+              url: this.ocpiConfig.getEndpointUrl('emsp', '2.3.0', 'commands'),
+            },
+            {
+              identifier: 'sessions',
+              url: this.ocpiConfig.getEndpointUrl('emsp', '2.3.0', 'sessions'),
+            },
+            // ...
+          ],
         },
         {
-          identifier: 'credentials',
-          url: 'https://you.example/ocpi/emsp/2.3.0/credentials',
+          version: '2.2.1',
+          endpoints: [
+            {
+              identifier: 'versions',
+              url: this.ocpiConfig.getEndpointUrl('emsp', '2.2.1', 'versions'),
+            },
+            {
+              identifier: 'credentials',
+              url: this.ocpiConfig.getEndpointUrl(
+                'emsp',
+                '2.2.1',
+                'credentials',
+              ),
+            },
+            {
+              identifier: 'commands',
+              url: this.ocpiConfig.getEndpointUrl('emsp', '2.2.1', 'commands'),
+            },
+            {
+              identifier: 'sessions',
+              url: this.ocpiConfig.getEndpointUrl('emsp', '2.2.1', 'sessions'),
+            },
+            // ...
+          ],
         },
-        {
-          identifier: 'commands',
-          url: 'https://you.example/ocpi/emsp/2.3.0/commands',
-        },
-        {
-          identifier: 'sessions',
-          url: 'https://you.example/ocpi/emsp/2.3.0/sessions',
-        },
-        // ...
       ],
-    },
-    {
-      version: '2.2.1',
-      endpoints: [
-        {
-          identifier: 'versions',
-          url: 'https://you.example/ocpi/emsp/2.2.1/versions',
-        },
-        {
-          identifier: 'credentials',
-          url: 'https://you.example/ocpi/emsp/2.2.1/credentials',
-        },
-        {
-          identifier: 'commands',
-          url: 'https://you.example/ocpi/emsp/2.2.1/commands',
-        },
-        {
-          identifier: 'sessions',
-          url: 'https://you.example/ocpi/emsp/2.2.1/sessions',
-        },
-        // ...
+      cpo: [
+        // same for CPO role...
       ],
-    },
-  ],
-  cpo: [
-    // same for CPO role...
-  ],
-})
+    })
+  }
+}
