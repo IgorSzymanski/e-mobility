@@ -89,38 +89,6 @@ model OcpiPeerEndpoint {
   @@schema("ocpi")
 }
 
-// OCPI Version Details Model (for static version catalog)
-model OcpiVersionDetail {
-  id        String                @id @default(cuid())
-  role      OcpiRole
-  version   String
-  createdAt DateTime              @map("created_at") @default(now())
-  updatedAt DateTime              @map("updated_at") @updatedAt
-
-  // Relations
-  endpoints OcpiModuleEndpoint[]
-
-  @@unique([role, version])
-  @@index([role])
-  @@index([version])
-  @@map("version_details")
-  @@schema("ocpi")
-}
-
-// OCPI Module Endpoints Model (for version catalog endpoints)
-model OcpiModuleEndpoint {
-  id              String                @id @default(cuid())
-  versionDetailId String                @map("version_detail_id")
-  identifier      OcpiModuleIdentifier
-  url             String                @db.VarChar(1024)
-
-  // Relations
-  versionDetail   OcpiVersionDetail     @relation(fields: [versionDetailId], references: [id], onDelete: Cascade)
-
-  @@unique([versionDetailId, identifier])
-  @@map("module_endpoints")
-  @@schema("ocpi")
-}
 
 // OCPI Bootstrap Tokens Model (for CREDENTIALS_TOKEN_A management)
 model OcpiBootstrapToken {
@@ -130,13 +98,12 @@ model OcpiBootstrapToken {
   expiresAt   DateTime? @map("expires_at")
   usedAt      DateTime? @map("used_at")
   usedBy      String?   @map("used_by") @db.VarChar(128) // Party ID who used this token
-  isActive    Boolean   @default(true) @map("is_active")
   createdAt   DateTime  @map("created_at") @default(now())
   updatedAt   DateTime  @map("updated_at") @updatedAt
 
   @@index([token])
-  @@index([isActive])
   @@index([expiresAt])
+  @@index([usedAt])
   @@map("bootstrap_tokens")
   @@schema("ocpi")
 }

@@ -12,7 +12,6 @@ async function main() {
     create: {
       token: 'initial-admin-bootstrap-token',
       description: 'Initial admin bootstrap token for first setup',
-      isActive: true,
     },
   })
 

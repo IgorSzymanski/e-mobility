@@ -149,7 +149,7 @@ describe('OCPI Bootstrap Flow (e2e)', () => {
       })
       expect(usedToken?.usedAt).toBeDefined()
       expect(usedToken?.usedBy).toBe('DE-ABC')
-      expect(usedToken?.isActive).toBe(false)
+      expect(usedToken?.usedAt).toBeDefined()
 
       // Step 3: Test that the peer can now authenticate with their token
       const authenticatedResponse = await request(app.getHttpServer())
@@ -468,7 +468,7 @@ describe('OCPI Bootstrap Flow (e2e)', () => {
       let tokenData = await prisma.ocpiBootstrapToken.findFirst({
         where: { token: bootstrapToken },
       })
-      expect(tokenData?.isActive).toBe(true)
+      expect(tokenData?.usedAt).toBeNull()
       expect(tokenData?.usedAt).toBeNull()
 
       // Mock external endpoints
@@ -520,7 +520,7 @@ describe('OCPI Bootstrap Flow (e2e)', () => {
       tokenData = await prisma.ocpiBootstrapToken.findFirst({
         where: { token: bootstrapToken },
       })
-      expect(tokenData?.isActive).toBe(false)
+      expect(tokenData?.usedAt).toBeDefined()
       expect(tokenData?.usedAt).toBeDefined()
       expect(tokenData?.usedBy).toBe('GB-SNG')
 

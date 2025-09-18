@@ -15,7 +15,6 @@ export interface BootstrapTokenInfo {
   expiresAt: Date | null
   usedAt: Date | null
   usedBy: string | null
-  isActive: boolean
   createdAt: Date
 }
 
@@ -54,18 +53,13 @@ export class BootstrapTokensRepository {
       return false
     }
 
-    // Check if token is active
-    if (!bootstrapToken.isActive) {
+    // Check if token has already been used
+    if (bootstrapToken.usedAt) {
       return false
     }
 
     // Check if token has expired
     if (bootstrapToken.expiresAt && bootstrapToken.expiresAt < new Date()) {
-      return false
-    }
-
-    // Check if token has already been used
-    if (bootstrapToken.usedAt) {
       return false
     }
 
@@ -78,7 +72,6 @@ export class BootstrapTokensRepository {
       data: {
         usedAt: new Date(),
         usedBy,
-        isActive: false, // Mark token as inactive when used
       },
     })
   }
@@ -87,14 +80,15 @@ export class BootstrapTokensRepository {
     await this.#db.ocpiBootstrapToken.update({
       where: { id },
       data: {
-        isActive: false,
+        usedAt: new Date(),
+        usedBy: 'ADMIN_DEACTIVATED',
       },
     })
   }
 
-  async findAll(includeInactive = false): Promise<BootstrapTokenInfo[]> {
+  async findAll(includeUsed = false): Promise<BootstrapTokenInfo[]> {
     const tokens = await this.#db.ocpiBootstrapToken.findMany({
-      where: includeInactive ? {} : { isActive: true },
+      where: includeUsed ? {} : { usedAt: null },
       orderBy: { createdAt: 'desc' },
     })
 
@@ -120,8 +114,8 @@ export class BootstrapTokensRepository {
     expiresAt: Date | null
     usedAt: Date | null
     usedBy: string | null
-    isActive: boolean
     createdAt: Date
+    updatedAt: Date
   }): BootstrapTokenInfo {
     return {
       id: token.id,
@@ -130,7 +124,6 @@ export class BootstrapTokensRepository {
       expiresAt: token.expiresAt,
       usedAt: token.usedAt,
       usedBy: token.usedBy,
-      isActive: token.isActive,
       createdAt: token.createdAt,
     }
   }

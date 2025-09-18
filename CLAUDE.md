@@ -133,3 +133,9 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format for all 
 - Use **Zod schemas** to validate runtime data, especially JSON from databases
 - Prefer **switch statements over if-else chains** when doing mappings
 - Use proper **type narrowing techniques** instead of forcing types
+
+## Database Schema Design Guidelines
+- **Avoid Boolean fields** - Instead of boolean flags like `isActive`, use DateTime fields that capture when events occurred
+- **Use timestamps for state tracking** - Fields like `activatedAt`, `deactivatedAt`, `usedAt`, `revokedAt` provide more valuable information than simple boolean flags
+- **Design for auditability** - DateTime fields enable better tracking of when state changes occurred
+- **Implicit state from presence** - A null `usedAt` field implies unused state, a populated field implies used state

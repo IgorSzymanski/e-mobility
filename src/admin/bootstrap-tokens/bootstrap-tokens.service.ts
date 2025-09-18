@@ -57,8 +57,8 @@ export class BootstrapTokensService {
     return this.mapToResponse(created)
   }
 
-  async listTokens(includeInactive = false): Promise<BootstrapTokenResponse[]> {
-    const tokens = await this.#repository.findAll(includeInactive)
+  async listTokens(includeUsed = false): Promise<BootstrapTokenResponse[]> {
+    const tokens = await this.#repository.findAll(includeUsed)
     return tokens.map((token) => this.mapToResponse(token))
   }
 
@@ -92,7 +92,7 @@ export class BootstrapTokensService {
       expiresAt: token.expiresAt?.toISOString() || null,
       usedAt: token.usedAt?.toISOString() || null,
       usedBy: token.usedBy,
-      isActive: token.isActive,
+      isActive: !token.usedAt, // Token is active if it hasn't been used
       createdAt: token.createdAt.toISOString(),
     }
   }
