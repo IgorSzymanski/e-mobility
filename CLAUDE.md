@@ -147,3 +147,4 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format for all 
 - **Use immutable object operations** - Prefer spread syntax `{...object, newProp: value}` over direct property assignment
 - **Functional programming principles** - Write pure functions that don't modify input parameters and always return new values
 - **Benefits of immutability** - Prevents side effects, makes code more predictable, easier to test, and reduces bugs
+- **Test file exceptions** - Mutability in test files (`*.spec.ts`, `*.e2e-spec.ts`) is acceptable for test setup, mocking, and isolation
