@@ -148,3 +148,15 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format for all 
 - **Functional programming principles** - Write pure functions that don't modify input parameters and always return new values
 - **Benefits of immutability** - Prevents side effects, makes code more predictable, easier to test, and reduces bugs
 - **Test file exceptions** - Mutability in test files (`*.spec.ts`, `*.e2e-spec.ts`) is acceptable for test setup, mocking, and isolation
+
+## Error Handling Guidelines
+- **Use OCPI-compliant exceptions** - Always throw OCPI exceptions (OcpiClientException, OcpiServerException) instead of generic Error types
+- **Map HTTP errors appropriately** - Convert axios/HTTP errors to specific OCPI error types based on status codes:
+  - `401/403` → `OcpiUnknownTokenException` (authentication issues)
+  - `404` → `OcpiUnknownLocationException` (resource not found)
+  - `5xx` → `OcpiUnableToUseClientApiException` (external service errors)
+  - Network errors → `OcpiNoMatchingEndpointsException` (connectivity issues)
+- **Use structured logging** - Replace `console.log/error` with NestJS Logger for proper log levels and context
+- **Type-safe error data access** - Use proper type assertions when accessing error response data (e.g., `error.response?.data as { status_message?: string }`)
+- **Preserve error context** - Include relevant details in error messages while avoiding exposure of sensitive information
+- **Consistent error propagation** - Don't swallow errors silently; either handle them appropriately or re-throw with better context

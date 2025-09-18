@@ -7,6 +7,9 @@ import { assertResponse } from '@/shared/utils'
 import {
   OcpiNoMatchingEndpointsException,
   OcpiUnsupportedVersionException,
+  OcpiUnknownTokenException,
+  OcpiUnknownLocationException,
+  OcpiUnableToUseClientApiException,
 } from '@/shared/exceptions/ocpi.exceptions'
 import { AxiosError } from 'axios'
 
@@ -81,8 +84,25 @@ export class VersionsClient221 {
       })
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
-        console.error(error.message)
-        throw new OcpiNoMatchingEndpointsException()
+        const statusCode = error.response?.status
+        const responseData = error.response?.data as
+          | { status_message?: string }
+          | undefined
+        const message = responseData?.status_message || error.message
+
+        if (statusCode === 401 || statusCode === 403) {
+          throw new OcpiUnknownTokenException('Authentication failed with peer')
+        } else if (statusCode === 404) {
+          throw new OcpiUnknownLocationException('Peer endpoint not found')
+        } else if (statusCode && statusCode >= 500) {
+          throw new OcpiUnableToUseClientApiException(
+            `Peer server error: ${message}`,
+          )
+        } else {
+          throw new OcpiNoMatchingEndpointsException(
+            `Network error during version negotiation: ${message}`,
+          )
+        }
       }
 
       throw error

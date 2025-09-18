@@ -22,6 +22,7 @@ import {
 import { OcpiEndpoint } from '@/ocpi/common/decorators/ocpi-endpoint.decorator'
 import { SkipOcpiAuth } from '@/ocpi/common/decorators/skip-ocpi-auth.decorator'
 import { OcpiAuthGuard } from '@/ocpi/common/guards/ocpi-auth.guard'
+import { OcpiInvalidParametersException } from '@/shared/exceptions/ocpi.exceptions'
 import { ZodValidationPipe } from 'nestjs-zod'
 
 @UseGuards(OcpiAuthGuard)
@@ -72,7 +73,9 @@ export class CredentialsController221 {
     @Req() req: Request & { credentialsToken?: string },
   ): Promise<OcpiResponse<undefined>> {
     if (!req.credentialsToken) {
-      throw new Error('Missing credentials token in request context')
+      throw new OcpiInvalidParametersException(
+        'Missing credentials token in request context',
+      )
     }
     await this.#svc.handleDelete(req.credentialsToken)
     return createOcpiSuccessResponse(undefined)

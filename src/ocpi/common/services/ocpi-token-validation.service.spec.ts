@@ -96,19 +96,19 @@ describe('OcpiTokenValidationService', () => {
     })
 
     it('should return null and log error when repository throws', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const loggerSpy = vi.spyOn(service['logger'], 'error').mockImplementation(() => {})
       const mockFindByToken = vi.mocked(peersRepository.findByCredentialsToken)
       mockFindByToken.mockRejectedValue(new Error('Database error'))
 
       const result = await service.validateCredentialsToken('test-token')
 
       expect(result).toBeNull()
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Error validating credentials token:',
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Error validating credentials token',
         expect.any(Error),
       )
 
-      consoleSpy.mockRestore()
+      loggerSpy.mockRestore()
     })
   })
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { PeersRepository } from '@/infrastructure/persistence/peers.repository'
 
 export interface OcpiParty {
@@ -25,6 +25,8 @@ interface PeerCredentialsResult {
  */
 @Injectable()
 export class OcpiTokenValidationService {
+  private readonly logger = new Logger(OcpiTokenValidationService.name)
+
   constructor(private readonly peersRepository: PeersRepository) {}
 
   /**
@@ -57,7 +59,7 @@ export class OcpiTokenValidationService {
       } satisfies OcpiParty
     } catch (error) {
       // Log error but don't expose internal details
-      console.error('Error validating credentials token:', error)
+      this.logger.error('Error validating credentials token', error)
       return null
     }
   }
