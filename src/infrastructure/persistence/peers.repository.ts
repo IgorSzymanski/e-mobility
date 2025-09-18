@@ -10,6 +10,11 @@ import {
 import { OcpiConfigService } from '@/shared/config/ocpi.config'
 import { TokenGenerator } from '@/infrastructure/security/token-generator'
 import type { CredentialsDto } from '@/ocpi/v2_2_1/credentials/dto/credentials.dto'
+import { CredentialsRoleSchema } from '@/ocpi/v2_2_1/credentials/dto/credentials.dto'
+import { z } from 'zod'
+
+// Schema for validating rolesJson from database
+const RolesJsonSchema = z.array(CredentialsRoleSchema)
 
 @Injectable()
 export class PeersRepository {
@@ -22,6 +27,20 @@ export class PeersRepository {
   ) {
     this.#db = db
     this.#tokenGen = tokenGen
+  }
+
+  /**
+   * Safely parse rolesJson from database using Zod schema
+   */
+  private parseRolesJson(
+    rolesJson: unknown,
+  ): z.infer<typeof CredentialsRoleSchema>[] {
+    const result = RolesJsonSchema.safeParse(rolesJson)
+    if (!result.success) {
+      console.warn('Invalid rolesJson format:', result.error)
+      return []
+    }
+    return result.data
   }
 
   async upsertFromIncomingCredentials(dto: CredentialsDto) {
@@ -82,11 +101,31 @@ export class PeersRepository {
 
       // Create new endpoints
       for (const e of endpoints) {
+        // Map OCPI role values to our internal enum
+        // OCPI uses SENDER/RECEIVER, we need to map to actual party roles
+        // For now, we'll derive the role from the peer's roles since SENDER/RECEIVER
+        // doesn't directly map to CPO/EMSP
+        const peerData = await tx.ocpiPeer.findUnique({
+          where: { id: peerId },
+          select: { rolesJson: true },
+        })
+
+        if (!peerData) continue
+
+        const roles = this.parseRolesJson(peerData.rolesJson)
+        const primaryRole = roles[0]?.role?.toLowerCase()
+
+        // Use the peer's primary role since SENDER/RECEIVER is context-dependent
+        const mappedRole =
+          primaryRole === 'cpo' || primaryRole === 'emsp'
+            ? (primaryRole as OcpiRole)
+            : ('emsp' as OcpiRole) // Default fallback
+
         await tx.ocpiPeerEndpoint.create({
           data: {
             peerId,
             module: e.identifier as OcpiModuleIdentifier,
-            role: e.role.toLowerCase() as OcpiRole,
+            role: mappedRole,
             url: e.url,
           },
         })
@@ -144,19 +183,14 @@ export class PeersRepository {
     }
 
     // Extract business details from the first role
-
-    const roles = peer.rolesJson as any[]
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const firstRole = roles?.[0]
+    const roles = this.parseRolesJson(peer.rolesJson)
+    const firstRole = roles[0]
 
     return {
       countryCode: peer.countryCode,
       partyId: peer.partyId,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       role: firstRole?.role || 'UNKNOWN',
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       businessDetailsName: firstRole?.business_details?.name || 'Unknown',
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       businessDetailsWebsite: firstRole?.business_details?.website || null,
     }
   }

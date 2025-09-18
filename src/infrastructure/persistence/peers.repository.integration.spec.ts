@@ -4,11 +4,21 @@ import { PeersRepository } from './peers.repository'
 import { OcpiConfigService } from '@/shared/config/ocpi.config'
 import { TokenGenerator } from '@/infrastructure/security/token-generator'
 import type { CredentialsDto } from '@/ocpi/v2_2_1/credentials/dto/credentials.dto'
+import { CredentialsRoleSchema } from '@/ocpi/v2_2_1/credentials/dto/credentials.dto'
+import { z } from 'zod'
 
 describe('PeersRepository Integration Tests', () => {
   let repository: PeersRepository
   let prisma: PrismaClient
   let moduleRef: TestingModule
+
+  // Helper to safely parse rolesJson from test results
+  const parseRolesJson = (
+    rolesJson: unknown,
+  ): z.infer<typeof CredentialsRoleSchema>[] => {
+    const result = z.array(CredentialsRoleSchema).safeParse(rolesJson)
+    return result.success ? result.data : []
+  }
 
   const mockCredentialsDto: CredentialsDto = {
     token: 'test-token-b',
@@ -109,7 +119,7 @@ describe('PeersRepository Integration Tests', () => {
       expect(result.baseVersionsUrl).toBe('https://example.com/ocpi/versions')
       expect(result.ourTokenForPeer).toBe('test-token-b')
       expect(result.status).toBe('PENDING')
-      expect(result.chosenVersion).toBe('v2_2_1')
+      expect(result.chosenVersion).toBe('2.2.1')
 
       // Verify rolesJson is properly stored
       expect(result.rolesJson).toEqual(mockCredentialsDto.roles)
@@ -163,8 +173,10 @@ describe('PeersRepository Integration Tests', () => {
 
       expect(result).toBeDefined()
       expect(result.rolesJson).toHaveLength(2)
-      expect((result.rolesJson as any)[0].role).toBe('EMSP')
-      expect((result.rolesJson as any)[1].role).toBe('CPO')
+
+      const roles = parseRolesJson(result.rolesJson)
+      expect(roles[0].role).toBe('EMSP')
+      expect(roles[1].role).toBe('CPO')
     })
   })
 
@@ -312,9 +324,9 @@ describe('PeersRepository Integration Tests', () => {
       )
       expect(result!.status).toBe('PENDING')
 
-      const rolesJson = result!.rolesJson as any
-      expect(rolesJson[0].role).toBe('CPO')
-      expect(rolesJson[0].business_details.name).toBe('Updated Test CPO')
+      const roles = parseRolesJson(result!.rolesJson)
+      expect(roles[0].role).toBe('CPO')
+      expect(roles[0].business_details?.name).toBe('Updated Test CPO')
     })
 
     it('should return null when peer does not exist', async () => {

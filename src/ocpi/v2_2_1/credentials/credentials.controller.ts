@@ -44,7 +44,7 @@ export class CredentialsController221 {
   }
 
   // Registration start (client sent us its credentials: includes their B + versions URL)
-  @SkipOcpiAuth() // Uses CREDENTIALS_TOKEN_A during initial registration
+  @SkipOcpiAuth()
   @Post()
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(CredentialsSchema))

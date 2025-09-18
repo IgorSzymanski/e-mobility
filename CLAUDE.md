@@ -121,3 +121,8 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format for all 
 - **DO NOT** add Co-Authored-By lines for Claude or AI tools
 - Keep commits clean and focused on the actual changes made
 - Write commit messages as if a human developer made the changes
+
+## Architecture Guidelines
+- Maintain clean separation of concerns between modules
+- Design modules to be self-contained with minimal coupling
+- Follow dependency injection patterns to promote modularity

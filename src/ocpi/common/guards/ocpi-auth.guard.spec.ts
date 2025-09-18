@@ -56,13 +56,17 @@ describe('OcpiAuthGuard', () => {
     vi.clearAllMocks()
   })
 
-  const createMockExecutionContext = (headers?: {
-    authorization?: string
-  }): ExecutionContext =>
+  const createMockExecutionContext = (
+    headers?: {
+      authorization?: string
+    },
+    url?: string,
+  ): ExecutionContext =>
     ({
       switchToHttp: () => ({
         getRequest: () => ({
           headers: headers || {},
+          url: url || '',
         }),
       }),
       getHandler: vi.fn(),
@@ -82,10 +86,13 @@ describe('OcpiAuthGuard', () => {
     )
     mockValidateBootstrapToken.mockResolvedValue(true)
 
-    const context = createMockExecutionContext({
-      authorization:
-        'Token ' + Buffer.from('valid-bootstrap-token').toString('base64'),
-    })
+    const context = createMockExecutionContext(
+      {
+        authorization:
+          'Token ' + Buffer.from('valid-bootstrap-token').toString('base64'),
+      },
+      '/ocpi/2.2.1/credentials',
+    )
     const result = await guard.canActivate(context)
 
     expect(result).toBe(true)
