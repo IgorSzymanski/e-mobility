@@ -21,6 +21,7 @@ describe('OcpiAuthGuard', () => {
 
   const mockBootstrapTokensService = {
     validateBootstrapToken: vi.fn(),
+    validateBootstrapTokenDetailed: vi.fn(),
   }
 
   beforeEach(async () => {
@@ -81,10 +82,10 @@ describe('OcpiAuthGuard', () => {
     const mockGetAllAndOverride = vi.mocked(reflector.getAllAndOverride)
     mockGetAllAndOverride.mockReturnValue(true)
 
-    const mockValidateBootstrapToken = vi.mocked(
-      mockBootstrapTokensService.validateBootstrapToken,
+    const mockValidateBootstrapTokenDetailed = vi.mocked(
+      mockBootstrapTokensService.validateBootstrapTokenDetailed,
     )
-    mockValidateBootstrapToken.mockResolvedValue(true)
+    mockValidateBootstrapTokenDetailed.mockResolvedValue({ isValid: true })
 
     const context = createMockExecutionContext(
       {
@@ -96,12 +97,91 @@ describe('OcpiAuthGuard', () => {
     const result = await guard.canActivate(context)
 
     expect(result).toBe(true)
-    expect(mockValidateBootstrapToken).toHaveBeenCalledWith(
+    expect(mockValidateBootstrapTokenDetailed).toHaveBeenCalledWith(
       'valid-bootstrap-token',
     )
     expect(
       tokenValidationService.validateCredentialsToken,
     ).not.toHaveBeenCalled()
+  })
+
+  it('should throw specific error for expired bootstrap token', async () => {
+    const mockGetAllAndOverride = vi.mocked(reflector.getAllAndOverride)
+    mockGetAllAndOverride.mockReturnValue(true)
+
+    const mockValidateBootstrapTokenDetailed = vi.mocked(
+      mockBootstrapTokensService.validateBootstrapTokenDetailed,
+    )
+    mockValidateBootstrapTokenDetailed.mockResolvedValue({
+      isValid: false,
+      error: 'TOKEN_EXPIRED',
+      errorMessage: 'Bootstrap token expired on 2024-01-01T00:00:00.000Z',
+    })
+
+    const context = createMockExecutionContext(
+      {
+        authorization:
+          'Token ' + Buffer.from('expired-bootstrap-token').toString('base64'),
+      },
+      '/ocpi/2.2.1/credentials',
+    )
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      'Bootstrap token expired on 2024-01-01T00:00:00.000Z',
+    )
+  })
+
+  it('should throw specific error for already used bootstrap token', async () => {
+    const mockGetAllAndOverride = vi.mocked(reflector.getAllAndOverride)
+    mockGetAllAndOverride.mockReturnValue(true)
+
+    const mockValidateBootstrapTokenDetailed = vi.mocked(
+      mockBootstrapTokensService.validateBootstrapTokenDetailed,
+    )
+    mockValidateBootstrapTokenDetailed.mockResolvedValue({
+      isValid: false,
+      error: 'TOKEN_ALREADY_USED',
+      errorMessage:
+        'Bootstrap token was already used on 2024-01-01T12:00:00.000Z',
+    })
+
+    const context = createMockExecutionContext(
+      {
+        authorization:
+          'Token ' + Buffer.from('used-bootstrap-token').toString('base64'),
+      },
+      '/ocpi/2.2.1/credentials',
+    )
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      'Bootstrap token was already used on 2024-01-01T12:00:00.000Z',
+    )
+  })
+
+  it('should throw specific error for non-existent bootstrap token', async () => {
+    const mockGetAllAndOverride = vi.mocked(reflector.getAllAndOverride)
+    mockGetAllAndOverride.mockReturnValue(true)
+
+    const mockValidateBootstrapTokenDetailed = vi.mocked(
+      mockBootstrapTokensService.validateBootstrapTokenDetailed,
+    )
+    mockValidateBootstrapTokenDetailed.mockResolvedValue({
+      isValid: false,
+      error: 'TOKEN_NOT_FOUND',
+      errorMessage: 'Bootstrap token not found',
+    })
+
+    const context = createMockExecutionContext(
+      {
+        authorization:
+          'Token ' + Buffer.from('nonexistent-token').toString('base64'),
+      },
+      '/ocpi/2.2.1/credentials',
+    )
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      'Bootstrap token not found',
+    )
   })
 
   it('should throw UnauthorizedException when Authorization header is missing', async () => {

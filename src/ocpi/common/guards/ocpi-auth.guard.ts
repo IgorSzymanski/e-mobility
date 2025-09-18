@@ -144,12 +144,18 @@ export class OcpiAuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid bootstrap token')
     }
 
-    // Validate bootstrap token
-    const isValid =
-      await this.bootstrapTokens.validateBootstrapToken(bootstrapToken)
+    // Validate bootstrap token with detailed error information
+    const validationResult =
+      await this.bootstrapTokens.validateBootstrapTokenDetailed(bootstrapToken)
 
-    if (!isValid) {
-      throw new UnauthorizedException('Invalid or expired bootstrap token')
+    if (!validationResult.isValid) {
+      let errorMessage = 'Invalid bootstrap token'
+
+      if (validationResult.errorMessage) {
+        errorMessage = validationResult.errorMessage
+      }
+
+      throw new UnauthorizedException(errorMessage)
     }
 
     // Store the bootstrap token in request for potential use

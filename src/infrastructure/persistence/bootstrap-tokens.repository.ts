@@ -18,6 +18,21 @@ export interface BootstrapTokenInfo {
   createdAt: Date
 }
 
+export enum BootstrapTokenValidationError {
+  TOKEN_NOT_FOUND = 'TOKEN_NOT_FOUND',
+  TOKEN_ALREADY_USED = 'TOKEN_ALREADY_USED',
+  TOKEN_EXPIRED = 'TOKEN_EXPIRED',
+}
+
+export interface BootstrapTokenValidationResult {
+  isValid: boolean
+  error?: BootstrapTokenValidationError
+  errorMessage?: string
+  usedAt?: Date
+  usedBy?: string
+  expiresAt?: Date
+}
+
 @Injectable()
 export class BootstrapTokensRepository {
   readonly #db: PrismaClient
@@ -47,23 +62,47 @@ export class BootstrapTokensRepository {
   }
 
   async validateToken(token: string): Promise<boolean> {
+    const result = await this.validateTokenDetailed(token)
+    return result.isValid
+  }
+
+  async validateTokenDetailed(
+    token: string,
+  ): Promise<BootstrapTokenValidationResult> {
     const bootstrapToken = await this.findByToken(token)
 
     if (!bootstrapToken) {
-      return false
+      return {
+        isValid: false,
+        error: BootstrapTokenValidationError.TOKEN_NOT_FOUND,
+        errorMessage: 'Bootstrap token not found',
+      }
     }
 
     // Check if token has already been used
     if (bootstrapToken.usedAt) {
-      return false
+      return {
+        isValid: false,
+        error: BootstrapTokenValidationError.TOKEN_ALREADY_USED,
+        errorMessage: `Bootstrap token was already used on ${bootstrapToken.usedAt.toISOString()}`,
+        usedAt: bootstrapToken.usedAt,
+        usedBy: bootstrapToken.usedBy || undefined,
+      }
     }
 
     // Check if token has expired
     if (bootstrapToken.expiresAt && bootstrapToken.expiresAt < new Date()) {
-      return false
+      return {
+        isValid: false,
+        error: BootstrapTokenValidationError.TOKEN_EXPIRED,
+        errorMessage: `Bootstrap token expired on ${bootstrapToken.expiresAt.toISOString()}`,
+        expiresAt: bootstrapToken.expiresAt,
+      }
     }
 
-    return true
+    return {
+      isValid: true,
+    }
   }
 
   async markAsUsed(token: string, usedBy: string): Promise<void> {

@@ -4,6 +4,7 @@ import {
   BootstrapTokensRepository,
   type CreateBootstrapTokenDto,
   type BootstrapTokenInfo,
+  type BootstrapTokenValidationResult,
 } from '@/infrastructure/persistence/bootstrap-tokens.repository'
 import { TokenGenerator } from '@/infrastructure/security/token-generator'
 
@@ -74,6 +75,12 @@ export class BootstrapTokensService {
 
   async validateBootstrapToken(token: string): Promise<boolean> {
     return this.#repository.validateToken(token)
+  }
+
+  async validateBootstrapTokenDetailed(
+    token: string,
+  ): Promise<BootstrapTokenValidationResult> {
+    return this.#repository.validateTokenDetailed(token)
   }
 
   async markTokenAsUsed(token: string, usedBy: string): Promise<void> {
