@@ -12,6 +12,25 @@ export class OcpiConfigService {
     )
   }
 
+  get partyId(): string {
+    return this.configService.get<string>('OCPI_PARTY_ID', 'DEFAULT')
+  }
+
+  get countryCode(): string {
+    return this.configService.get<string>('OCPI_COUNTRY_CODE', 'PL')
+  }
+
+  get businessName(): string {
+    return this.configService.get<string>(
+      'OCPI_BUSINESS_NAME',
+      'Default Business Name',
+    )
+  }
+
+  get businessWebsite(): string | null {
+    return this.configService.get<string>('OCPI_BUSINESS_WEBSITE') || null
+  }
+
   /**
    * Generate OCPI endpoint URL
    * @param role - OCPI role (emsp, cpo)

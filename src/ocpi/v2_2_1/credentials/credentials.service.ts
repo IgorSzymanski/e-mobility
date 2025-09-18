@@ -65,7 +65,7 @@ export class CredentialsService221 {
     return this.getOurCredentials()
   }
 
-  async handleDelete(): Promise<void> {
-    await this.#peers.revokeByAuthContext() // looks up caller by Authorization token and revokes
+  async handleDelete(credentialsToken: string): Promise<void> {
+    await this.#peers.revokeByAuthContext(credentialsToken) // revokes the peer using this token
   }
 }

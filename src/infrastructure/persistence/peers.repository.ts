@@ -9,16 +9,20 @@ import {
   OcpiRole,
 } from '@prisma/client'
 import { OcpiConfigService } from '@/shared/config/ocpi.config'
+import { TokenGenerator } from '@/infrastructure/security/token-generator'
 import type { CredentialsDto } from '@/ocpi/v2_2_1/credentials/dto/credentials.dto'
 
 @Injectable()
 export class PeersRepository {
   readonly #db: PrismaClient
+  readonly #tokenGen: TokenGenerator
   constructor(
     db: PrismaClient,
     private readonly ocpiConfig: OcpiConfigService,
+    tokenGen: TokenGenerator,
   ) {
     this.#db = db
+    this.#tokenGen = tokenGen
   }
 
   async upsertFromIncomingCredentials(dto: CredentialsDto) {
@@ -158,29 +162,47 @@ export class PeersRepository {
     }
   }
 
-  async revokeByAuthContext(): Promise<void> {
-    // Look up calling token C from request context (inject in guard), then revoke:
-    // UPDATE ocpi.peers SET status='REVOKED' WHERE peer_token_for_us = $1
+  async revokeByAuthContext(credentialsToken: string): Promise<void> {
+    // Revoke the peer that uses this credentials token to authenticate with us
+    await this.#db.ocpiPeer.updateMany({
+      where: {
+        peerTokenForUs: credentialsToken,
+        status: {
+          not: OcpiPeerStatus.REVOKED,
+        },
+      },
+      data: {
+        status: OcpiPeerStatus.REVOKED,
+        lastUpdated: new Date(),
+      },
+    })
   }
 
   async getSelfPresentation(): Promise<CredentialsDto> {
-    // Return your own CredentialsDto (token C for this caller context + roles + versions URL)
-    // You may compute per-tenant token C if you run multi-tenant.
+    // Generate a fresh token C for the requesting peer
+    const token = this.#tokenGen.generate()
+
     return Object.freeze({
-      token: '<your-current-C-for-this-peer>',
+      token,
       url: `${this.ocpiConfig.baseUrl}/ocpi/versions`,
       roles: [
         {
-          role: 'CPO',
-          party_id: 'IGI',
-          country_code: 'PL',
-          business_details: { name: 'Igor' },
+          role: 'CPO' as const,
+          party_id: this.ocpiConfig.partyId,
+          country_code: this.ocpiConfig.countryCode,
+          business_details: {
+            name: this.ocpiConfig.businessName,
+            website: this.ocpiConfig.businessWebsite || undefined,
+          },
         },
         {
-          role: 'EMSP',
-          party_id: 'IGI',
-          country_code: 'PL',
-          business_details: { name: 'Igor' },
+          role: 'EMSP' as const,
+          party_id: this.ocpiConfig.partyId,
+          country_code: this.ocpiConfig.countryCode,
+          business_details: {
+            name: this.ocpiConfig.businessName,
+            website: this.ocpiConfig.businessWebsite || undefined,
+          },
         },
       ],
     } as const)

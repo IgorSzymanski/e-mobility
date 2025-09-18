@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { PrismaClient } from '@prisma/client'
 import { PeersRepository } from './peers.repository'
 import { OcpiConfigService } from '@/shared/config/ocpi.config'
+import { TokenGenerator } from '@/infrastructure/security/token-generator'
 import type { CredentialsDto } from '@/ocpi/v2_2_1/credentials/dto/credentials.dto'
 
 describe('PeersRepository Integration Tests', () => {
@@ -42,13 +43,15 @@ describe('PeersRepository Integration Tests', () => {
           (role, version, identifier) =>
             `http://localhost:3000/ocpi/${role}/${version}/${identifier}`,
         ),
-      getBaseUrl: vi.fn().mockReturnValue('http://localhost:3000'),
-      getOurToken: vi.fn().mockReturnValue('our-test-token'),
-      getOurCredentials: vi.fn().mockReturnValue({
-        token: 'our-test-token',
-        url: 'http://localhost:3000/ocpi/versions',
-        roles: [],
-      }),
+      baseUrl: 'http://localhost:3000',
+      partyId: 'TEST',
+      countryCode: 'NL',
+      businessName: 'Test Business',
+      businessWebsite: 'https://test-business.com',
+    }
+
+    const mockTokenGenerator = {
+      generate: vi.fn().mockReturnValue('generated-test-token'),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -61,6 +64,10 @@ describe('PeersRepository Integration Tests', () => {
         {
           provide: OcpiConfigService,
           useValue: mockOcpiConfig,
+        },
+        {
+          provide: TokenGenerator,
+          useValue: mockTokenGenerator,
         },
       ],
     }).compile()
