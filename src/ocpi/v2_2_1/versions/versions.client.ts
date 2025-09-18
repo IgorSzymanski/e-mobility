@@ -25,7 +25,6 @@ export class VersionsClient221 {
     baseVersionsUrl: string
   }) {
     try {
-      // Use B to call their /versions:
       const auth = `Token ${Buffer.from(peer.ourTokenForPeer, 'utf8').toString('base64')}`
       const result = await firstValueFrom(
         this.#http.get(peer.baseVersionsUrl, {
@@ -48,7 +47,6 @@ export class VersionsClient221 {
 
       const { data: versions } = result
 
-      // Pick highest mutual (e.g., prefer 2.3.0 then 2.2.1)
       const chosen =
         versions.data.find((v) => v.version === '2.3.0') ??
         versions.data.find((v) => v.version === '2.2.1')
@@ -59,7 +57,6 @@ export class VersionsClient221 {
         )
       }
 
-      // Fetch version_details.endpoints
       const versionDetailsResult = await firstValueFrom(
         this.#http.get(chosen.url, {
           headers: { Authorization: auth, Accept: 'application/json' },

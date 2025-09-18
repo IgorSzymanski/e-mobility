@@ -76,7 +76,6 @@ export class PeersRepository {
   }
 
   async upsertFromIncomingCredentials(dto: CredentialsDto) {
-    // Pick canonical identity from roles (first role is fine; you may require exactly one EMSP/CPO tuple)
     const r = dto.roles[0]
 
     const peer = await this.#db.ocpiPeer.upsert({
@@ -115,7 +114,6 @@ export class PeersRepository {
     endpoints: ReadonlyArray<{ identifier: string; role: string; url: string }>,
   ) {
     await this.#db.$transaction(async (tx) => {
-      // Update peer
       await tx.ocpiPeer.update({
         where: { id: peerId },
         data: {
@@ -126,12 +124,10 @@ export class PeersRepository {
         },
       })
 
-      // Replace endpoints - delete existing ones first
       await tx.ocpiPeerEndpoint.deleteMany({
         where: { peerId },
       })
 
-      // Create new endpoints
       for (const e of endpoints) {
         // Map OCPI role values to our internal enum
         // OCPI uses SENDER/RECEIVER, we need to map to actual party roles
@@ -192,7 +188,6 @@ export class PeersRepository {
       return undefined
     }
 
-    // Return the updated peer
     const updatedPeer = await this.#db.ocpiPeer.findUnique({
       where: {
         uq_party: {
@@ -206,7 +201,6 @@ export class PeersRepository {
   }
 
   async findByCredentialsToken(credentialsToken: string) {
-    // Find peer by the token they use to authenticate with us (peerTokenForUs)
     const peer = await this.#db.ocpiPeer.findFirst({
       where: {
         peerTokenForUs: credentialsToken,
@@ -220,7 +214,6 @@ export class PeersRepository {
       return null
     }
 
-    // Extract business details from the first role
     const roles = this.parseRolesJson(peer.rolesJson)
     const firstRole = roles[0]
 
@@ -234,7 +227,6 @@ export class PeersRepository {
   }
 
   async revokeByAuthContext(credentialsToken: string): Promise<void> {
-    // Revoke the peer that uses this credentials token to authenticate with us
     await this.#db.ocpiPeer.updateMany({
       where: {
         peerTokenForUs: credentialsToken,
@@ -250,7 +242,6 @@ export class PeersRepository {
   }
 
   async getSelfPresentation(): Promise<CredentialsDto> {
-    // Generate a fresh token C for the requesting peer
     const token = this.#tokenGen.generate()
 
     return Object.freeze({

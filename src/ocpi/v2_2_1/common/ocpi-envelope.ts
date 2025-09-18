@@ -1,4 +1,3 @@
-// ocpi/v2_2_1/common/ocpi-envelope.ts
 export type OcpiStatusCode =
   | 1000
   | 2000

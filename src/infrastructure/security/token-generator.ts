@@ -1,4 +1,3 @@
-// src/infrastructure/security/token-generator.ts
 import { Injectable } from '@nestjs/common'
 import {
   randomBytes,
@@ -8,18 +7,16 @@ import {
 } from 'node:crypto'
 
 /**
- * TokenGenerator – generuje i koduje tokeny do OCPI Credentials.
+ * TokenGenerator – generates and encodes tokens for OCPI Credentials.
  *
- * generate()        -> Base64URL (bez paddingu) do wyświetlania/logiki aplikacji
- * toAuthHeader(t)   -> "Token <base64(t)>" zgodnie z OCPI (nagłówek HTTP)
- * fromAuthHeader(h) -> dekoduje Base64 z nagłówka do surowego tokenu (string)
- * hash/verify       -> bezpieczne przechowywanie i weryfikacja tokenu
+ * generate()        -> Base64URL (without padding) for application display/logic
+ * toAuthHeader(t)   -> "Token <base64(t)>" according to OCPI (HTTP header)
+ * fromAuthHeader(h) -> decodes Base64 from header to raw token (string)
+ * hash/verify       -> secure storage and token verification
  */
 @Injectable()
 export class TokenGenerator {
-  // opcjonalny sekret do HMAC (lepsze niż czyste hashowanie)
   readonly #hmacSecret?: string
-  // długość w bajtach dla CSPRNG
   static readonly BYTES = 32 // 256-bit
 
   constructor() {
@@ -27,7 +24,7 @@ export class TokenGenerator {
   }
 
   /**
-   * Generuje nowy token w formacie Base64URL (bez '=' i znaków +,/)
+   * Generates a new token in Base64URL format (without '=' and +,/ characters)
    */
   generate(): string {
     const buf = randomBytes(TokenGenerator.BYTES) // CSPRNG
@@ -35,9 +32,9 @@ export class TokenGenerator {
   }
 
   /**
-   * Buduje wartość nagłówka Authorization dla OCPI:
+   * Builds Authorization header value for OCPI:
    * "Token " + Base64(ASCII(token))
-   * Spec OCPI wymaga, aby WARTOŚĆ w nagłówku była Base64. Token może być ASCII.
+   * OCPI spec requires the VALUE in the header to be Base64. Token can be ASCII.
    */
   toAuthorizationHeader(token: string): string {
     const base64 = Buffer.from(token, 'utf8').toString('base64') // klasyczny Base64
@@ -45,8 +42,8 @@ export class TokenGenerator {
   }
 
   /**
-   * Odczyt tokenu z nagłówka "Authorization: Token <base64-ascii>"
-   * Zwraca oryginalny ASCII token (np. nasz Base64URL)
+   * Reads token from "Authorization: Token <base64-ascii>" header
+   * Returns original ASCII token (e.g., our Base64URL)
    */
   fromAuthorizationHeader(header: string | undefined): string | null {
     if (!header) return null
@@ -60,8 +57,8 @@ export class TokenGenerator {
   }
 
   /**
-   * Zwraca hash tokenu do przechowywania w bazie (hex).
-   * Preferowany HMAC-SHA-256 z sekretem; fallback na SHA-256 jeśli brak sekretu.
+   * Returns token hash for database storage (hex).
+   * Preferred HMAC-SHA-256 with secret; fallback to SHA-256 if no secret.
    */
   hash(token: string): string {
     if (this.#hmacSecret) {
@@ -73,7 +70,7 @@ export class TokenGenerator {
   }
 
   /**
-   * Stałoczasowa weryfikacja podanego tokenu względem przechowywanego hash-a.
+   * Constant-time verification of given token against stored hash.
    */
   verify(token: string, storedHashHex: string): boolean {
     const given = Buffer.from(this.hash(token), 'hex')
@@ -82,9 +79,7 @@ export class TokenGenerator {
     return timingSafeEqual(given, stored)
   }
 
-  // --- helpers ---
-
-  /** Base64URL bez paddingu '=' */
+  /** Base64URL without padding '=' */
   private static toBase64Url(buf: Buffer): string {
     return buf
       .toString('base64')

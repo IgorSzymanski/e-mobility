@@ -1,4 +1,3 @@
-// src/ocpi/versions/version-registry.ts
 import { Injectable } from '@nestjs/common'
 import { OcpiConfigService } from '@/shared/config/ocpi.config'
 import { EndpointDiscoveryService } from './endpoint-discovery.service'

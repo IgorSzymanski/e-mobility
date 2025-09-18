@@ -1,4 +1,3 @@
-// domain/peers/Peer.ts
 export type PartyRole = 'CPO' | 'EMSP' | 'HUB'
 export type OcpiVersion = '2.2.1' | '2.3.0'
 
