@@ -16,6 +16,7 @@ import {
   createOcpiSuccessResponse,
 } from '@/ocpi/v2_2_1/common/ocpi-envelope'
 import { OcpiEndpoint } from '@/ocpi/common/decorators/ocpi-endpoint.decorator'
+import { SkipOcpiAuth } from '@/ocpi/common/decorators/skip-ocpi-auth.decorator'
 
 @OcpiEndpoint({
   identifier: 'credentials',
@@ -36,6 +37,7 @@ export class CredentialsController221 {
   }
 
   // Registration start (client sent us its credentials: includes their B + versions URL)
+  @SkipOcpiAuth() // Uses CREDENTIALS_TOKEN_A during initial registration
   @Post()
   @HttpCode(HttpStatus.OK)
   async register(

@@ -125,6 +125,39 @@ export class PeersRepository {
     return updatedPeer
   }
 
+  async findByCredentialsToken(credentialsToken: string) {
+    // Find peer by the token they use to authenticate with us (peerTokenForUs)
+    const peer = await this.#db.ocpiPeer.findFirst({
+      where: {
+        peerTokenForUs: credentialsToken,
+        status: {
+          not: OcpiPeerStatus.REVOKED,
+        },
+      },
+    })
+
+    if (!peer) {
+      return null
+    }
+
+    // Extract business details from the first role
+
+    const roles = peer.rolesJson as any[]
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const firstRole = roles?.[0]
+
+    return {
+      countryCode: peer.countryCode,
+      partyId: peer.partyId,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      role: firstRole?.role || 'UNKNOWN',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      businessDetailsName: firstRole?.business_details?.name || 'Unknown',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      businessDetailsWebsite: firstRole?.business_details?.website || null,
+    }
+  }
+
   async revokeByAuthContext(): Promise<void> {
     // Look up calling token C from request context (inject in guard), then revoke:
     // UPDATE ocpi.peers SET status='REVOKED' WHERE peer_token_for_us = $1

@@ -6,7 +6,7 @@ import { OcpiEndpoint } from '@/ocpi/common/decorators/ocpi-endpoint.decorator'
 import { Controller } from '@nestjs/common'
 
 @OcpiEndpoint({
-  identifier: 'test-endpoint',
+  identifier: 'sessions',
   version: '2.2.1',
   roles: ['cpo', 'emsp'],
 })
@@ -28,9 +28,12 @@ describe('EndpointDiscoveryService', () => {
     }
 
     const mockOcpiConfig = {
-      getEndpointUrl: vi.fn().mockImplementation((role, version, identifier) =>
-        `http://localhost:3000/ocpi/${role}/${version}/${identifier}`
-      ),
+      getEndpointUrl: vi
+        .fn()
+        .mockImplementation(
+          (role, version, identifier) =>
+            `http://localhost:3000/ocpi/${role}/${version}/${identifier}`,
+        ),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -64,8 +67,8 @@ describe('EndpointDiscoveryService', () => {
 
     expect(endpoints).toHaveLength(1)
     expect(endpoints[0]).toEqual({
-      identifier: 'test-endpoint',
-      url: 'http://localhost:3000/ocpi/cpo/2.2.1/test-endpoint',
+      identifier: 'sessions',
+      url: 'http://localhost:3000/ocpi/cpo/2.2.1/sessions',
     })
   })
 
@@ -76,8 +79,10 @@ describe('EndpointDiscoveryService', () => {
   })
 
   it('should check if endpoint exists', () => {
-    expect(service.hasEndpoint('cpo', '2.2.1', 'test-endpoint')).toBe(true)
-    expect(service.hasEndpoint('cpo', '2.2.1', 'non-existent')).toBe(false)
+    expect(service.hasEndpoint('cpo', '2.2.1', 'sessions')).toBe(true)
+    expect(service.hasEndpoint('cpo', '2.2.1', 'non-existent' as any)).toBe(
+      false,
+    )
   })
 
   it('should return empty array for unsupported role/version', () => {

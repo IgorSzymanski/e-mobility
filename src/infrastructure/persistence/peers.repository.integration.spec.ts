@@ -36,9 +36,12 @@ describe('PeersRepository Integration Tests', () => {
     })
 
     const mockOcpiConfig = {
-      getEndpointUrl: vi.fn().mockImplementation((role, version, identifier) =>
-        `http://localhost:3000/ocpi/${role}/${version}/${identifier}`
-      ),
+      getEndpointUrl: vi
+        .fn()
+        .mockImplementation(
+          (role, version, identifier) =>
+            `http://localhost:3000/ocpi/${role}/${version}/${identifier}`,
+        ),
       getBaseUrl: vi.fn().mockReturnValue('http://localhost:3000'),
       getOurToken: vi.fn().mockReturnValue('our-test-token'),
       getOurCredentials: vi.fn().mockReturnValue({

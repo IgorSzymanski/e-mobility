@@ -7,10 +7,13 @@ import {
   OcpiInvalidParametersException,
   OcpiUnknownLocationException,
 } from '@/shared/exceptions/ocpi.exceptions'
+import { SkipOcpiAuth } from '@/ocpi/common/decorators/skip-ocpi-auth.decorator'
 
 @Controller('/ocpi/:role')
 export class VersionsController {
   constructor(private readonly versionRegistry: VersionRegistryService) {}
+
+  @SkipOcpiAuth()
   @Get('/versions')
   listVersions(@Param() params: RoleParamDto) {
     const { role } = params
@@ -29,6 +32,7 @@ export class VersionsController {
     return createOcpiSuccessResponse(data)
   }
 
+  @SkipOcpiAuth()
   @Get('/version_details')
   getVersionDetails(
     @Param() params: RoleParamDto,

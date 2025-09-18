@@ -25,9 +25,12 @@ describe('VersionRegistryService', () => {
     }
 
     const mockOcpiConfig = {
-      getEndpointUrl: vi.fn().mockImplementation((role, version, identifier) =>
-        `http://localhost:3000/ocpi/${role}/${version}/${identifier}`
-      ),
+      getEndpointUrl: vi
+        .fn()
+        .mockImplementation(
+          (role, version, identifier) =>
+            `http://localhost:3000/ocpi/${role}/${version}/${identifier}`,
+        ),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -45,7 +48,9 @@ describe('VersionRegistryService', () => {
     }).compile()
 
     service = module.get<VersionRegistryService>(VersionRegistryService)
-    endpointDiscovery = module.get<EndpointDiscoveryService>(EndpointDiscoveryService)
+    endpointDiscovery = module.get<EndpointDiscoveryService>(
+      EndpointDiscoveryService,
+    )
   })
 
   it('should be defined', () => {
@@ -86,7 +91,11 @@ describe('VersionRegistryService', () => {
     expect(endpointDiscovery.getSupportedVersions).toHaveBeenCalledWith('cpo')
 
     service.hasEndpoint('cpo', '2.2.1', 'credentials')
-    expect(endpointDiscovery.hasEndpoint).toHaveBeenCalledWith('cpo', '2.2.1', 'credentials')
+    expect(endpointDiscovery.hasEndpoint).toHaveBeenCalledWith(
+      'cpo',
+      '2.2.1',
+      'credentials',
+    )
   })
 
   it('should return endpoint URL or null', () => {
@@ -94,7 +103,11 @@ describe('VersionRegistryService', () => {
     expect(url).toBe('http://localhost:3000/ocpi/cpo/2.2.1/credentials')
 
     vi.mocked(endpointDiscovery.getAvailableEndpoints).mockReturnValue([])
-    const nullUrl = service.getEndpointUrl('cpo', '2.2.1', 'non-existent')
+    const nullUrl = service.getEndpointUrl(
+      'cpo',
+      '2.2.1',
+      'non-existent' as any,
+    )
     expect(nullUrl).toBeNull()
   })
 })
