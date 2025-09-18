@@ -121,3 +121,22 @@ model OcpiModuleEndpoint {
   @@map("module_endpoints")
   @@schema("ocpi")
 }
+
+// OCPI Bootstrap Tokens Model (for CREDENTIALS_TOKEN_A management)
+model OcpiBootstrapToken {
+  id          String    @id @default(cuid())
+  token       String    @unique @db.VarChar(128)
+  description String?   @db.VarChar(512)
+  expiresAt   DateTime? @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  usedBy      String?   @map("used_by") @db.VarChar(128) // Party ID who used this token
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @map("created_at") @default(now())
+  updatedAt   DateTime  @map("updated_at") @updatedAt
+
+  @@index([token])
+  @@index([isActive])
+  @@index([expiresAt])
+  @@map("bootstrap_tokens")
+  @@schema("ocpi")
+}

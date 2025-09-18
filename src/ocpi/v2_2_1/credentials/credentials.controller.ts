@@ -44,8 +44,9 @@ export class CredentialsController221 {
   @HttpCode(HttpStatus.OK)
   async register(
     @Body() clientCreds: CredentialsDto,
+    @Req() req: Request & { credentialsToken?: string },
   ): Promise<OcpiResponse<CredentialsDto>> {
-    const result = await this.#svc.handlePost(clientCreds)
+    const result = await this.#svc.handlePost(clientCreds, req.credentialsToken)
     return createOcpiSuccessResponse(result)
   }
 

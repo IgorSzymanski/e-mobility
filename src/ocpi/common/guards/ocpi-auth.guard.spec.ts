@@ -3,11 +3,13 @@ import { ExecutionContext, UnauthorizedException } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { OcpiAuthGuard } from './ocpi-auth.guard'
 import { OcpiTokenValidationService } from '../services/ocpi-token-validation.service'
+import { BootstrapTokensService } from '@/admin/bootstrap-tokens/bootstrap-tokens.service'
 
 describe('OcpiAuthGuard', () => {
   let guard: OcpiAuthGuard
   let reflector: Reflector
   let tokenValidationService: OcpiTokenValidationService
+  let bootstrapTokensService: BootstrapTokensService
 
   const mockTokenValidationService = {
     validateCredentialsToken: vi.fn(),
@@ -15,6 +17,10 @@ describe('OcpiAuthGuard', () => {
 
   const mockReflector = {
     getAllAndOverride: vi.fn(),
+  }
+
+  const mockBootstrapTokensService = {
+    validateBootstrapToken: vi.fn(),
   }
 
   beforeEach(async () => {
@@ -29,6 +35,10 @@ describe('OcpiAuthGuard', () => {
           provide: OcpiTokenValidationService,
           useValue: mockTokenValidationService,
         },
+        {
+          provide: BootstrapTokensService,
+          useValue: mockBootstrapTokensService,
+        },
       ],
     }).compile()
 
@@ -37,19 +47,20 @@ describe('OcpiAuthGuard', () => {
     tokenValidationService = module.get<OcpiTokenValidationService>(
       OcpiTokenValidationService,
     )
+    bootstrapTokensService = module.get<BootstrapTokensService>(BootstrapTokensService)
   })
 
   afterEach(() => {
     vi.clearAllMocks()
   })
 
-  const createMockExecutionContext = (authHeader?: string): ExecutionContext =>
+  const createMockExecutionContext = (
+    headers?: { authorization?: string }
+  ): ExecutionContext =>
     ({
       switchToHttp: () => ({
         getRequest: () => ({
-          headers: {
-            authorization: authHeader,
-          },
+          headers: headers || {},
         }),
       }),
       getHandler: vi.fn(),
@@ -60,14 +71,20 @@ describe('OcpiAuthGuard', () => {
     expect(guard).toBeDefined()
   })
 
-  it('should skip authentication when @SkipOcpiAuth decorator is present', async () => {
+  it('should validate bootstrap token when @SkipOcpiAuth decorator is present', async () => {
     const mockGetAllAndOverride = vi.mocked(reflector.getAllAndOverride)
     mockGetAllAndOverride.mockReturnValue(true)
 
-    const context = createMockExecutionContext()
+    const mockValidateBootstrapToken = vi.mocked(mockBootstrapTokensService.validateBootstrapToken)
+    mockValidateBootstrapToken.mockResolvedValue(true)
+
+    const context = createMockExecutionContext({
+      authorization: 'Token ' + Buffer.from('valid-bootstrap-token').toString('base64'),
+    })
     const result = await guard.canActivate(context)
 
     expect(result).toBe(true)
+    expect(mockValidateBootstrapToken).toHaveBeenCalledWith('valid-bootstrap-token')
     expect(
       tokenValidationService.validateCredentialsToken,
     ).not.toHaveBeenCalled()
@@ -93,7 +110,7 @@ describe('OcpiAuthGuard', () => {
       mockGetAllAndOverride,
     )
 
-    const context = createMockExecutionContext('Bearer some-token')
+    const context = createMockExecutionContext({ authorization: 'Bearer some-token' })
 
     await expect(guard.canActivate(context)).rejects.toThrow(
       UnauthorizedException,
@@ -125,7 +142,7 @@ describe('OcpiAuthGuard', () => {
 
     // Base64 encode 'test-token'
     const encodedToken = Buffer.from('test-token', 'utf-8').toString('base64')
-    const context = createMockExecutionContext(`Token ${encodedToken}`)
+    const context = createMockExecutionContext({ authorization: `Token ${encodedToken}` })
 
     const result = await guard.canActivate(context)
 
@@ -153,7 +170,7 @@ describe('OcpiAuthGuard', () => {
 
     mockValidateToken.mockResolvedValue(mockParty)
 
-    const context = createMockExecutionContext('Token test-token')
+    const context = createMockExecutionContext({ authorization: 'Token test-token' })
 
     const result = await guard.canActivate(context)
 
@@ -172,7 +189,7 @@ describe('OcpiAuthGuard', () => {
       tokenValidationService.validateCredentialsToken,
     ).mockImplementation(mockValidateToken)
 
-    const context = createMockExecutionContext('Token test-token')
+    const context = createMockExecutionContext({ authorization: 'Token test-token' })
 
     await expect(guard.canActivate(context)).rejects.toThrow(
       UnauthorizedException,

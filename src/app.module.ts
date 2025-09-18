@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { OcpiModule } from './ocpi/ocpi.module'
+import { AdminModule } from './admin/admin.module'
 import { OcpiExceptionFilter } from '@/shared/filters'
 
 @Module({
@@ -14,6 +15,7 @@ import { OcpiExceptionFilter } from '@/shared/filters'
       envFilePath: ['.env.local', '.env'],
     }),
     OcpiModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

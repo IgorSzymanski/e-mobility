@@ -13,9 +13,10 @@ import { OcpiAuthGuard } from './common/guards/ocpi-auth.guard'
 import { OcpiTokenValidationService } from './common/services/ocpi-token-validation.service'
 import { PeersRepository } from '@/infrastructure/persistence/peers.repository'
 import { TokenGenerator } from '@/infrastructure/security/token-generator'
+import { AdminModule } from '@/admin/admin.module'
 
 @Module({
-  imports: [DiscoveryModule, HttpModule],
+  imports: [DiscoveryModule, HttpModule, AdminModule],
   controllers: [VersionsController, CredentialsController221],
   providers: [
     VersionRegistryService,

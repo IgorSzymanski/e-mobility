@@ -10,6 +10,7 @@ import {
   OcpiTokenValidationService,
   type OcpiParty,
 } from '../services/ocpi-token-validation.service'
+import { BootstrapTokensService } from '@/admin/bootstrap-tokens/bootstrap-tokens.service'
 
 export const SKIP_OCPI_AUTH_KEY = 'skipOcpiAuth'
 
@@ -27,6 +28,7 @@ export class OcpiAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly tokenValidation: OcpiTokenValidationService,
+    private readonly bootstrapTokens: BootstrapTokensService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -35,11 +37,12 @@ export class OcpiAuthGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     )
 
-    if (skipAuth) {
-      return true
-    }
-
     const request = context.switchToHttp().getRequest<RequestWithOcpiAuth>()
+
+    if (skipAuth) {
+      // For endpoints marked with @SkipOcpiAuth, validate bootstrap token
+      return this.validateBootstrapToken(request)
+    }
     const authHeader = request.headers.authorization
 
     if (!authHeader) {
@@ -91,6 +94,60 @@ export class OcpiAuthGuard implements CanActivate {
     // Add party information to request for use in controllers
     request.ocpiParty = party
     request.credentialsToken = credentialsToken
+
+    return true
+  }
+
+  private async validateBootstrapToken(
+    request: RequestWithOcpiAuth,
+  ): Promise<boolean> {
+    const authHeader = request.headers.authorization
+
+    if (!authHeader) {
+      throw new UnauthorizedException(
+        'Missing Authorization header for bootstrap endpoint',
+      )
+    }
+
+    if (!authHeader.startsWith('Token ')) {
+      throw new UnauthorizedException(
+        'Invalid Authorization header format. Expected: Token <bootstrap-token>',
+      )
+    }
+
+    const encodedToken = authHeader.substring(6) // Remove 'Token ' prefix
+    let bootstrapToken: string
+
+    try {
+      // OCPI 2.2.1+ requires Base64 encoding of tokens
+      if (/^[A-Za-z0-9+/]*={0,2}$/.test(encodedToken)) {
+        const decoded = Buffer.from(encodedToken, 'base64').toString('utf-8')
+        if (/^[\x20-\x7E]+$/.test(decoded)) {
+          bootstrapToken = decoded
+        } else {
+          bootstrapToken = encodedToken
+        }
+      } else {
+        bootstrapToken = encodedToken
+      }
+    } catch {
+      bootstrapToken = encodedToken
+    }
+
+    if (!bootstrapToken) {
+      throw new UnauthorizedException('Invalid bootstrap token')
+    }
+
+    // Validate bootstrap token
+    const isValid =
+      await this.bootstrapTokens.validateBootstrapToken(bootstrapToken)
+
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid or expired bootstrap token')
+    }
+
+    // Store the bootstrap token in request for potential use
+    request.credentialsToken = bootstrapToken
 
     return true
   }
