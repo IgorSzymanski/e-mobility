@@ -25,7 +25,7 @@ export class OcpiExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
     const response = ctx.getResponse<Response>()
-    const request = ctx.getRequest()
+    const request = ctx.getRequest<{ url?: string }>()
 
     // Only apply OCPI formatting to OCPI endpoints
     const isOcpiEndpoint = request.url?.startsWith('/ocpi/')
@@ -97,13 +97,15 @@ export class OcpiExceptionFilter implements ExceptionFilter {
         message =
           typeof exceptionResponse === 'string'
             ? exceptionResponse
-            : (exceptionResponse as any)?.message || 'Client error'
+            : (exceptionResponse as { message?: string })?.message ||
+              'Client error'
       } else {
         statusCode = 3000 // Generic server error
         message =
           typeof exceptionResponse === 'string'
             ? exceptionResponse
-            : (exceptionResponse as any)?.message || 'Server error'
+            : (exceptionResponse as { message?: string })?.message ||
+              'Server error'
       }
     } else {
       // Unknown errors
