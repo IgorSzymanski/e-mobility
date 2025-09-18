@@ -274,7 +274,7 @@ describe('OCPI 2.2.1 Compliance (e2e)', () => {
         .expect(400)
 
       // Should return OCPI-compliant error for malformed JSON
-      expectOcpiResponse(response.body, 2000) // Generic client error
+      expectOcpiResponse(response.body, 2001) // Invalid parameters
     })
   })
 

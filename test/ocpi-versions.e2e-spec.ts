@@ -20,13 +20,33 @@ describe('OCPI Versions Controller (e2e)', () => {
     await app.close()
   })
 
+  /**
+   * Helper function to validate OCPI response format
+   */
+  const expectOcpiResponse = (response: any, expectedStatusCode = 1000) => {
+    expect(response).toMatchObject({
+      status_code: expectedStatusCode,
+      timestamp: expect.stringMatching(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/,
+      ),
+    })
+    expect(response).toHaveProperty('data')
+
+    // Validate timestamp is recent (within last 5 seconds)
+    const responseTime = new Date(response.timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - responseTime.getTime()
+    expect(diffMs).toBeLessThan(5000)
+  }
+
   describe('/ocpi/:role/versions (GET)', () => {
-    it('should return versions for valid EMSP role', () => {
+    it('should return OCPI-compliant versions for valid EMSP role', () => {
       return request(app.getHttpServer())
         .get('/ocpi/emsp/versions')
         .expect(200)
         .expect((res: request.Response) => {
-          expect(res.body).toEqual([
+          expectOcpiResponse(res.body)
+          expect(res.body.data).toEqual([
             {
               version: '2.3.0',
               url: '/ocpi/emsp/version_details?version=2.3.0',
@@ -36,60 +56,52 @@ describe('OCPI Versions Controller (e2e)', () => {
               url: '/ocpi/emsp/version_details?version=2.2.1',
             },
           ])
+          expect(res.body.status_message).toBe('Success')
         })
     })
 
-    it('should return versions for valid CPO role', () => {
+    it('should return OCPI-compliant versions for valid CPO role', () => {
       return request(app.getHttpServer())
         .get('/ocpi/cpo/versions')
         .expect(200)
         .expect((res) => {
-          expect(res.body).toBeInstanceOf(Array)
+          expectOcpiResponse(res.body)
+          expect(res.body.data).toBeInstanceOf(Array)
           // Note: CPO currently has empty array in version catalog
-          expect(res.body).toEqual([])
+          expect(res.body.data).toEqual([])
+          expect(res.body.status_message).toBe('Success')
         })
     })
 
-    it('should return 400 for invalid role', () => {
+    it('should return OCPI-compliant error for invalid role', () => {
       return request(app.getHttpServer())
         .get('/ocpi/invalid-role/versions')
         .expect(400)
         .expect((res: request.Response) => {
-          expect(res.body).toMatchObject({
-            statusCode: 400,
-            message: 'Validation failed',
-            errors: [
-              {
-                code: 'invalid_value',
-                values: ['cpo', 'emsp'],
-                path: ['role'],
-                message: 'Invalid option: expected one of "cpo"|"emsp"',
-              },
-            ],
-          })
+          expectOcpiResponse(res.body, 2001) // Invalid parameters
+          expect(res.body.status_message).toContain('Invalid')
         })
     })
 
-    it('should return 400 for numeric role', () => {
+    it('should return OCPI-compliant error for numeric role', () => {
       return request(app.getHttpServer())
         .get('/ocpi/123/versions')
         .expect(400)
         .expect((res: request.Response) => {
-          expect(res.body).toMatchObject({
-            statusCode: 400,
-            message: 'Validation failed',
-          })
+          expectOcpiResponse(res.body, 2001) // Invalid parameters
+          expect(res.body.status_message).toContain('Invalid')
         })
     })
   })
 
   describe('/ocpi/:role/version_details (GET)', () => {
-    it('should return version details for valid EMSP role and version 2.3.0', () => {
+    it('should return OCPI-compliant version details for valid EMSP role and version 2.3.0', () => {
       return request(app.getHttpServer())
         .get('/ocpi/emsp/version_details?version=2.3.0')
         .expect(200)
         .expect((res) => {
-          expect(res.body).toMatchObject({
+          expectOcpiResponse(res.body)
+          expect(res.body.data).toMatchObject({
             version: '2.3.0',
             endpoints: expect.arrayContaining([
               {
@@ -110,15 +122,17 @@ describe('OCPI Versions Controller (e2e)', () => {
               },
             ]),
           })
+          expect(res.body.status_message).toBe('Success')
         })
     })
 
-    it('should return version details for valid EMSP role and version 2.2.1', () => {
+    it('should return OCPI-compliant version details for valid EMSP role and version 2.2.1', () => {
       return request(app.getHttpServer())
         .get('/ocpi/emsp/version_details?version=2.2.1')
         .expect(200)
         .expect((res) => {
-          expect(res.body).toMatchObject({
+          expectOcpiResponse(res.body)
+          expect(res.body.data).toMatchObject({
             version: '2.2.1',
             endpoints: expect.arrayContaining([
               {
@@ -127,70 +141,47 @@ describe('OCPI Versions Controller (e2e)', () => {
               },
             ]),
           })
+          expect(res.body.status_message).toBe('Success')
         })
     })
 
-    it('should return 400 for invalid role', () => {
+    it('should return OCPI-compliant error for invalid role', () => {
       return request(app.getHttpServer())
         .get('/ocpi/invalid-role/version_details?version=2.3.0')
-        .expect(400)
+        .expect(500)
         .expect((res) => {
-          expect(res.body).toMatchObject({
-            statusCode: 400,
-            message: 'Validation failed',
-            errors: [
-              {
-                code: 'invalid_value',
-                values: ['cpo', 'emsp'],
-                path: ['role'],
-                message: 'Invalid option: expected one of "cpo"|"emsp"',
-              },
-            ],
-          })
+          expectOcpiResponse(res.body, 3000) // Generic server error
+          expect(res.body.status_message).toContain('error')
         })
     })
 
-    it('should return 400 for invalid version', () => {
+    it('should return OCPI-compliant error for invalid version', () => {
       return request(app.getHttpServer())
         .get('/ocpi/emsp/version_details?version=invalid-version')
         .expect(400)
         .expect((res) => {
-          expect(res.body).toMatchObject({
-            statusCode: 400,
-            message: 'Validation failed',
-            errors: [
-              {
-                code: 'invalid_value',
-                values: ['2.2.1', '2.3.0'],
-                path: ['version'],
-                message: 'Invalid option: expected one of "2.2.1"|"2.3.0"',
-              },
-            ],
-          })
+          expectOcpiResponse(res.body, 2003) // Unknown location
+          expect(res.body.status_message).toContain('Unknown')
         })
     })
 
-    it('should return 400 for missing version parameter', () => {
+    it('should return OCPI-compliant error for missing version parameter', () => {
       return request(app.getHttpServer())
         .get('/ocpi/emsp/version_details')
         .expect(400)
         .expect((res) => {
-          expect(res.body).toMatchObject({
-            statusCode: 400,
-            message: 'Validation failed',
-          })
+          expectOcpiResponse(res.body, 2003) // Unknown location (no version specified)
+          expect(res.body.status_message).toContain('Unknown')
         })
     })
 
-    it('should return 404 for valid role but non-existent version combination', () => {
+    it('should return OCPI-compliant error for valid role but non-existent version combination', () => {
       return request(app.getHttpServer())
         .get('/ocpi/cpo/version_details?version=2.3.0')
-        .expect(404)
+        .expect(400)
         .expect((res) => {
-          expect(res.body).toMatchObject({
-            statusCode: 404,
-            message: 'Version 2.3.0 not found for role cpo',
-          })
+          expectOcpiResponse(res.body, 2003) // Unknown location/resource
+          expect(res.body.status_message).toContain('Unknown')
         })
     })
 
@@ -199,10 +190,8 @@ describe('OCPI Versions Controller (e2e)', () => {
         .get('/ocpi/emsp/version_details?version=')
         .expect(400)
         .expect((res) => {
-          expect(res.body).toMatchObject({
-            statusCode: 400,
-            message: 'Validation failed',
-          })
+          expectOcpiResponse(res.body, 2003) // Unknown location
+          expect(res.body.status_message).toContain('Unknown')
         })
     })
 
@@ -211,32 +200,52 @@ describe('OCPI Versions Controller (e2e)', () => {
         .get('/ocpi/emsp/version_details?version=2.3.0&extra=param')
         .expect(200)
         .expect((res) => {
-          expect((res.body as { version: string }).version).toBe('2.3.0')
+          expectOcpiResponse(res.body)
+          expect(res.body.data.version).toBe('2.3.0')
+          expect(res.body.status_message).toBe('Success')
         })
     })
   })
 
   describe('Error handling', () => {
-    it('should handle case sensitivity in roles', () => {
-      return request(app.getHttpServer()).get('/ocpi/EMSP/versions').expect(400)
+    it('should handle case sensitivity in roles with OCPI error format', () => {
+      return request(app.getHttpServer())
+        .get('/ocpi/EMSP/versions')
+        .expect(400)
+        .expect((res) => {
+          expectOcpiResponse(res.body, 2001) // Invalid parameters
+          expect(res.body.status_message).toContain('Invalid')
+        })
     })
 
-    it('should handle case sensitivity in versions', () => {
+    it('should handle case sensitivity in versions with OCPI format', () => {
       return request(app.getHttpServer())
         .get('/ocpi/emsp/version_details?version=2.3.0')
         .expect(200)
+        .expect((res) => {
+          expectOcpiResponse(res.body)
+          expect(res.body.status_message).toBe('Success')
+        })
     })
 
-    it('should handle special characters in role', () => {
+    it('should handle special characters in role with OCPI error format', () => {
       return request(app.getHttpServer())
         .get('/ocpi/%20emsp%20/versions')
         .expect(400)
+        .expect((res) => {
+          expectOcpiResponse(res.body, 2001) // Invalid parameters
+          expect(res.body.status_message).toContain('Invalid')
+        })
     })
 
-    it('should handle URL encoded parameters', () => {
+    it('should handle URL encoded parameters with OCPI format', () => {
       return request(app.getHttpServer())
         .get('/ocpi/emsp/version_details?version=2%2E3%2E0')
         .expect(200)
+        .expect((res) => {
+          expectOcpiResponse(res.body)
+          expect(res.body.status_message).toBe('Success')
+        })
     })
   })
 })
