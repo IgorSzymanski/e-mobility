@@ -16,6 +16,23 @@ import { z } from 'zod'
 // Schema for validating rolesJson from database
 const RolesJsonSchema = z.array(CredentialsRoleSchema)
 
+// Schema for validating OCPI module identifiers
+const OcpiModuleIdentifierSchema = z.enum([
+  'sessions',
+  'cdrs',
+  'locations',
+  'tokens',
+  'commands',
+  'tariffs',
+  'credentials',
+  'versions',
+])
+
+// Type guard for OcpiRole
+const isValidOcpiRole = (role: string): role is OcpiRole => {
+  return role === 'cpo' || role === 'emsp'
+}
+
 @Injectable()
 export class PeersRepository {
   readonly #db: PrismaClient
@@ -39,6 +56,20 @@ export class PeersRepository {
     if (!result.success) {
       console.warn('Invalid rolesJson format:', result.error)
       return []
+    }
+    return result.data
+  }
+
+  /**
+   * Safely validate OCPI module identifier
+   */
+  private parseModuleIdentifier(
+    identifier: string,
+  ): OcpiModuleIdentifier | null {
+    const result = OcpiModuleIdentifierSchema.safeParse(identifier)
+    if (!result.success) {
+      console.warn('Invalid OCPI module identifier:', identifier)
+      return null
     }
     return result.data
   }
@@ -116,15 +147,21 @@ export class PeersRepository {
         const primaryRole = roles[0]?.role?.toLowerCase()
 
         // Use the peer's primary role since SENDER/RECEIVER is context-dependent
-        const mappedRole =
-          primaryRole === 'cpo' || primaryRole === 'emsp'
-            ? (primaryRole as OcpiRole)
-            : ('emsp' as OcpiRole) // Default fallback
+        const mappedRole: OcpiRole = isValidOcpiRole(primaryRole)
+          ? primaryRole
+          : 'emsp' // Default fallback
+
+        // Validate the module identifier
+        const moduleIdentifier = this.parseModuleIdentifier(e.identifier)
+        if (!moduleIdentifier) {
+          console.warn(`Skipping invalid module identifier: ${e.identifier}`)
+          continue
+        }
 
         await tx.ocpiPeerEndpoint.create({
           data: {
             peerId,
-            module: e.identifier as OcpiModuleIdentifier,
+            module: moduleIdentifier,
             role: mappedRole,
             url: e.url,
           },

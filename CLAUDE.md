@@ -126,3 +126,10 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format for all 
 - Maintain clean separation of concerns between modules
 - Design modules to be self-contained with minimal coupling
 - Follow dependency injection patterns to promote modularity
+
+## Type Safety Guidelines
+- **Avoid type casting at all cost** - Never use `as Type` or unsafe type assertions
+- Use **type guards** to safely narrow types (e.g., `isValidRole(value): value is Role`)
+- Use **Zod schemas** to validate runtime data, especially JSON from databases
+- Prefer **switch statements over if-else chains** when doing mappings
+- Use proper **type narrowing techniques** instead of forcing types
