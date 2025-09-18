@@ -62,28 +62,29 @@ export class OcpiAuthGuard implements CanActivate {
     }
 
     const encodedToken = authHeader.substring(6) // Remove 'Token ' prefix
-    let credentialsToken: string
 
-    try {
-      // OCPI 2.2.1+ requires Base64 encoding of credentials token
-      // First check if it looks like Base64 (contains only valid Base64 characters)
-      if (/^[A-Za-z0-9+/]*={0,2}$/.test(encodedToken)) {
-        const decoded = Buffer.from(encodedToken, 'base64').toString('utf-8')
-        // Verify the decoded content looks reasonable (printable ASCII)
-        if (/^[\x20-\x7E]+$/.test(decoded)) {
-          credentialsToken = decoded
+    const credentialsToken: string = (() => {
+      try {
+        // OCPI 2.2.1+ requires Base64 encoding of credentials token
+        // First check if it looks like Base64 (contains only valid Base64 characters)
+        if (/^[A-Za-z0-9+/]*={0,2}$/.test(encodedToken)) {
+          const decoded = Buffer.from(encodedToken, 'base64').toString('utf-8')
+          // Verify the decoded content looks reasonable (printable ASCII)
+          if (/^[\x20-\x7E]+$/.test(decoded)) {
+            return decoded
+          } else {
+            // Not valid decoded content, treat as non-Base64
+            return encodedToken
+          }
         } else {
-          // Not valid decoded content, treat as non-Base64
-          credentialsToken = encodedToken
+          // Doesn't look like Base64, treat as plain token
+          return encodedToken
         }
-      } else {
-        // Doesn't look like Base64, treat as plain token
-        credentialsToken = encodedToken
+      } catch {
+        // Fallback for OCPI 2.1.1/2.2 implementations that don't Base64 encode
+        return encodedToken
       }
-    } catch {
-      // Fallback for OCPI 2.1.1/2.2 implementations that don't Base64 encode
-      credentialsToken = encodedToken
-    }
+    })()
 
     if (!credentialsToken) {
       throw new UnauthorizedException('Invalid credentials token')
@@ -122,23 +123,24 @@ export class OcpiAuthGuard implements CanActivate {
     }
 
     const encodedToken = authHeader.substring(6) // Remove 'Token ' prefix
-    let bootstrapToken: string
 
-    try {
-      // OCPI 2.2.1+ requires Base64 encoding of tokens
-      if (/^[A-Za-z0-9+/]*={0,2}$/.test(encodedToken)) {
-        const decoded = Buffer.from(encodedToken, 'base64').toString('utf-8')
-        if (/^[\x20-\x7E]+$/.test(decoded)) {
-          bootstrapToken = decoded
+    const bootstrapToken: string = (() => {
+      try {
+        // OCPI 2.2.1+ requires Base64 encoding of tokens
+        if (/^[A-Za-z0-9+/]*={0,2}$/.test(encodedToken)) {
+          const decoded = Buffer.from(encodedToken, 'base64').toString('utf-8')
+          if (/^[\x20-\x7E]+$/.test(decoded)) {
+            return decoded
+          } else {
+            return encodedToken
+          }
         } else {
-          bootstrapToken = encodedToken
+          return encodedToken
         }
-      } else {
-        bootstrapToken = encodedToken
+      } catch {
+        return encodedToken
       }
-    } catch {
-      bootstrapToken = encodedToken
-    }
+    })()
 
     if (!bootstrapToken) {
       throw new UnauthorizedException('Invalid bootstrap token')
@@ -149,12 +151,8 @@ export class OcpiAuthGuard implements CanActivate {
       await this.bootstrapTokens.validateBootstrapTokenDetailed(bootstrapToken)
 
     if (!validationResult.isValid) {
-      let errorMessage = 'Invalid bootstrap token'
-
-      if (validationResult.errorMessage) {
-        errorMessage = validationResult.errorMessage
-      }
-
+      const errorMessage =
+        validationResult.errorMessage ?? 'Invalid bootstrap token'
       throw new UnauthorizedException(errorMessage)
     }
 

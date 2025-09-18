@@ -43,28 +43,32 @@ export class VersionRegistryService {
 
     // Dynamically build catalog from discovered endpoints
     for (const role of ['cpo', 'emsp'] as const) {
-      const roleVersions: VersionDetails[] = []
+      const roleVersions: VersionDetails[] = (['2.2.1', '2.3.0'] as const)
+        .map((version) => {
+          const discoveredEndpoints =
+            this.endpointDiscovery.getAvailableEndpoints(role, version)
 
-      for (const version of ['2.2.1', '2.3.0'] as const) {
-        const discoveredEndpoints =
-          this.endpointDiscovery.getAvailableEndpoints(role, version)
+          if (discoveredEndpoints.length > 0) {
+            // Always include the versions endpoint for each supported version
+            const endpoints: ModuleDescriptor[] = [
+              {
+                identifier: 'versions',
+                url: this.ocpiConfig.getEndpointUrl(role, version, 'versions'),
+              },
+              ...discoveredEndpoints,
+            ]
 
-        if (discoveredEndpoints.length > 0) {
-          // Always include the versions endpoint for each supported version
-          const endpoints: ModuleDescriptor[] = [
-            {
-              identifier: 'versions',
-              url: this.ocpiConfig.getEndpointUrl(role, version, 'versions'),
-            },
-            ...discoveredEndpoints,
-          ]
-
-          roleVersions.push({
-            version,
-            endpoints: Object.freeze(endpoints),
-          })
-        }
-      }
+            return {
+              version,
+              endpoints: Object.freeze(endpoints),
+            }
+          }
+          return null
+        })
+        .filter(
+          (versionDetail): versionDetail is VersionDetails =>
+            versionDetail !== null,
+        )
 
       if (roleVersions.length > 0) {
         catalog[role] = Object.freeze(roleVersions)

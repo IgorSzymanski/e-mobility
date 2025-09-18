@@ -42,11 +42,10 @@ export class BootstrapTokensService {
   ): Promise<BootstrapTokenResponse> {
     const token = this.#tokenGenerator.generate()
 
-    let expiresAt: Date | undefined
-    if (request.expiresInDays && request.expiresInDays > 0) {
-      expiresAt = new Date()
-      expiresAt.setDate(expiresAt.getDate() + request.expiresInDays)
-    }
+    const expiresAt: Date | undefined =
+      request.expiresInDays && request.expiresInDays > 0
+        ? new Date(Date.now() + request.expiresInDays * 24 * 60 * 60 * 1000)
+        : undefined
 
     const dto: CreateBootstrapTokenDto = {
       token,
