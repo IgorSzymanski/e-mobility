@@ -110,7 +110,9 @@ describe('OCPI Versions Controller (e2e)', () => {
               },
               {
                 identifier: 'credentials',
-                url: expect.stringMatching(/\/ocpi\/emsp\/2\.3\.0\/credentials$/),
+                url: expect.stringMatching(
+                  /\/ocpi\/emsp\/2\.3\.0\/credentials$/,
+                ),
               },
               {
                 identifier: 'commands',

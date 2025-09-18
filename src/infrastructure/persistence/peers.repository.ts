@@ -141,13 +141,13 @@ export class PeersRepository {
           role: 'CPO',
           party_id: 'IGI',
           country_code: 'PL',
-          business_details: { name: 'Spirii' },
+          business_details: { name: 'Igor' },
         },
         {
           role: 'EMSP',
           party_id: 'IGI',
           country_code: 'PL',
-          business_details: { name: 'Spirii' },
+          business_details: { name: 'Igor' },
         },
       ],
     } as const)
