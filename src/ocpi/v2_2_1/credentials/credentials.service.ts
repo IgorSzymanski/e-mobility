@@ -58,7 +58,12 @@ export class CredentialsService221 {
       await this.#bootstrapTokens.markTokenAsUsed(bootstrapToken, usedBy)
     }
 
-    return this.getOurCredentials()
+    // Return our credentials with the specific token we generated for this peer
+    const selfPresentation = await this.#peers.getSelfPresentation()
+    return {
+      ...selfPresentation,
+      token: tokenC, // Use the specific token we generated for this peer
+    }
   }
 
   // PUT: rotate/update (or switch version), same storage as POST but peer already exists
@@ -77,7 +82,13 @@ export class CredentialsService221 {
       chosen.version,
       chosen.endpoints,
     )
-    return this.getOurCredentials()
+
+    // Return our credentials with the specific token we generated for this peer
+    const selfPresentation = await this.#peers.getSelfPresentation()
+    return {
+      ...selfPresentation,
+      token: tokenC, // Use the specific token we generated for this peer
+    }
   }
 
   async handleDelete(credentialsToken: string): Promise<void> {

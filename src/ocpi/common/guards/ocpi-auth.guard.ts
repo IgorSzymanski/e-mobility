@@ -40,8 +40,14 @@ export class OcpiAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<RequestWithOcpiAuth>()
 
     if (skipAuth) {
-      // For endpoints marked with @SkipOcpiAuth, validate bootstrap token
-      return this.validateBootstrapToken(request)
+      // For endpoints marked with @SkipOcpiAuth, check if it's a credentials endpoint
+      // Only credentials endpoints during registration need bootstrap token validation
+      // Other endpoints (like /versions) should be publicly accessible
+      if (request.url?.includes('/credentials')) {
+        return this.validateBootstrapToken(request)
+      }
+      // Public endpoints like /versions don't need any authentication
+      return true
     }
     const authHeader = request.headers.authorization
 

@@ -78,6 +78,7 @@ export class BootstrapTokensRepository {
       data: {
         usedAt: new Date(),
         usedBy,
+        isActive: false, // Mark token as inactive when used
       },
     })
   }

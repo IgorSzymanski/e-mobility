@@ -71,7 +71,7 @@ export class VersionRegistryService {
       }
     }
 
-    return Object.freeze(catalog) as VersionCatalog
+    return Object.freeze(catalog)
   }
 
   getSupportedVersions(role: OcpiRole): readonly OcpiVersion[] {

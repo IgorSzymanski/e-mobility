@@ -9,9 +9,11 @@ import {
   Post,
   Put,
   Req,
+  UseGuards,
+  UsePipes,
 } from '@nestjs/common'
 import { Request } from 'express'
-import type { CredentialsDto } from './dto/credentials.dto'
+import { CredentialsSchema, type CredentialsDto } from './dto/credentials.dto'
 import { CredentialsService221 } from './credentials.service'
 import {
   OcpiResponse,
@@ -19,7 +21,10 @@ import {
 } from '@/ocpi/v2_2_1/common/ocpi-envelope'
 import { OcpiEndpoint } from '@/ocpi/common/decorators/ocpi-endpoint.decorator'
 import { SkipOcpiAuth } from '@/ocpi/common/decorators/skip-ocpi-auth.decorator'
+import { OcpiAuthGuard } from '@/ocpi/common/guards/ocpi-auth.guard'
+import { ZodValidationPipe } from 'nestjs-zod'
 
+@UseGuards(OcpiAuthGuard)
 @OcpiEndpoint({
   identifier: 'credentials',
   version: '2.2.1',
@@ -42,6 +47,7 @@ export class CredentialsController221 {
   @SkipOcpiAuth() // Uses CREDENTIALS_TOKEN_A during initial registration
   @Post()
   @HttpCode(HttpStatus.OK)
+  @UsePipes(new ZodValidationPipe(CredentialsSchema))
   async register(
     @Body() clientCreds: CredentialsDto,
     @Req() req: Request & { credentialsToken?: string },

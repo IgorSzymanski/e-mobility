@@ -3,6 +3,19 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
+  console.log('Seeding OCPI data...')
+
+  // Create initial bootstrap token for admin access
+  const initialBootstrapToken = await prisma.ocpiBootstrapToken.upsert({
+    where: { token: 'initial-admin-bootstrap-token' },
+    update: {},
+    create: {
+      token: 'initial-admin-bootstrap-token',
+      description: 'Initial admin bootstrap token for first setup',
+      isActive: true,
+    },
+  })
+
   console.log('Seeding OCPI version catalog...')
 
   // Seed EMSP version details
@@ -68,6 +81,7 @@ async function main() {
   // You can add CPO versions here as needed
 
   console.log('Seeded version details:', { emsp230, emsp221 })
+  console.log('Seeded initial bootstrap token:', initialBootstrapToken)
   console.log('Seeding completed successfully!')
 }
 

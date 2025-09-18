@@ -3,7 +3,6 @@
 import { Injectable } from '@nestjs/common'
 import {
   PrismaClient,
-  OcpiVersion,
   OcpiPeerStatus,
   OcpiModuleIdentifier,
   OcpiRole,
@@ -48,7 +47,7 @@ export class PeersRepository {
         partyId: r.party_id,
         baseVersionsUrl: dto.url,
         rolesJson: dto.roles,
-        chosenVersion: OcpiVersion.v2_2_1, // temporary until negotiate
+        chosenVersion: '2.2.1', // temporary until negotiate
         ourTokenForPeer: dto.token, // B (we will use this to call them)
         peerTokenForUs: '', // peer_token_for_us will be set later
         status: OcpiPeerStatus.PENDING,
@@ -70,7 +69,7 @@ export class PeersRepository {
         where: { id: peerId },
         data: {
           peerTokenForUs: tokenC,
-          chosenVersion: version as OcpiVersion,
+          chosenVersion: version,
           status: OcpiPeerStatus.REGISTERED,
           lastUpdated: new Date(),
         },

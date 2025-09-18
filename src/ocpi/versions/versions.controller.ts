@@ -1,5 +1,5 @@
 // src/ocpi/versions/versions.controller.ts
-import { Controller, Get, Query, Param } from '@nestjs/common'
+import { Controller, Get, Query, Param, UseGuards } from '@nestjs/common'
 import { VersionRegistryService, OcpiRole } from './version-registry'
 import type { RoleParamDto, VersionDetailsQueryDto } from './dto/versions.dto'
 import { createOcpiSuccessResponse } from '@/ocpi/v2_2_1/common/ocpi-envelope'
@@ -8,7 +8,9 @@ import {
   OcpiUnknownLocationException,
 } from '@/shared/exceptions/ocpi.exceptions'
 import { SkipOcpiAuth } from '@/ocpi/common/decorators/skip-ocpi-auth.decorator'
+import { OcpiAuthGuard } from '@/ocpi/common/guards/ocpi-auth.guard'
 
+@UseGuards(OcpiAuthGuard)
 @Controller('/ocpi/:role')
 export class VersionsController {
   constructor(private readonly versionRegistry: VersionRegistryService) {}

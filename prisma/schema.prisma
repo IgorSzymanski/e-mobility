@@ -30,12 +30,12 @@ enum OcpiRole {
   @@schema("ocpi")
 }
 
-enum OcpiVersion {
-  v2_2_1 @map("2.2.1")
-  v2_3_0 @map("2.3.0")
+// enum OcpiVersion {
+//   v2_2_1 @map("2.2.1")
+//   v2_3_0 @map("2.3.0")
 
-  @@schema("ocpi")
-}
+//   @@schema("ocpi")
+// }
 
 enum OcpiModuleIdentifier {
   sessions
@@ -57,7 +57,7 @@ model OcpiPeer {
   partyId           String            @map("party_id") @db.Char(3)
   baseVersionsUrl   String            @map("base_versions_url") @db.VarChar(512)
   rolesJson         Json              @map("roles_json")
-  chosenVersion     OcpiVersion       @map("chosen_version")
+  chosenVersion     String       @map("chosen_version")
   ourTokenForPeer   String            @map("our_token_for_peer") @db.VarChar(128)
   peerTokenForUs    String            @map("peer_token_for_us") @db.VarChar(128)
   status            OcpiPeerStatus
@@ -93,7 +93,7 @@ model OcpiPeerEndpoint {
 model OcpiVersionDetail {
   id        String                @id @default(cuid())
   role      OcpiRole
-  version   OcpiVersion
+  version   String
   createdAt DateTime              @map("created_at") @default(now())
   updatedAt DateTime              @map("updated_at") @updatedAt
 

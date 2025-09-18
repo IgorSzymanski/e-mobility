@@ -47,16 +47,18 @@ describe('OcpiAuthGuard', () => {
     tokenValidationService = module.get<OcpiTokenValidationService>(
       OcpiTokenValidationService,
     )
-    bootstrapTokensService = module.get<BootstrapTokensService>(BootstrapTokensService)
+    bootstrapTokensService = module.get<BootstrapTokensService>(
+      BootstrapTokensService,
+    )
   })
 
   afterEach(() => {
     vi.clearAllMocks()
   })
 
-  const createMockExecutionContext = (
-    headers?: { authorization?: string }
-  ): ExecutionContext =>
+  const createMockExecutionContext = (headers?: {
+    authorization?: string
+  }): ExecutionContext =>
     ({
       switchToHttp: () => ({
         getRequest: () => ({
@@ -75,16 +77,21 @@ describe('OcpiAuthGuard', () => {
     const mockGetAllAndOverride = vi.mocked(reflector.getAllAndOverride)
     mockGetAllAndOverride.mockReturnValue(true)
 
-    const mockValidateBootstrapToken = vi.mocked(mockBootstrapTokensService.validateBootstrapToken)
+    const mockValidateBootstrapToken = vi.mocked(
+      mockBootstrapTokensService.validateBootstrapToken,
+    )
     mockValidateBootstrapToken.mockResolvedValue(true)
 
     const context = createMockExecutionContext({
-      authorization: 'Token ' + Buffer.from('valid-bootstrap-token').toString('base64'),
+      authorization:
+        'Token ' + Buffer.from('valid-bootstrap-token').toString('base64'),
     })
     const result = await guard.canActivate(context)
 
     expect(result).toBe(true)
-    expect(mockValidateBootstrapToken).toHaveBeenCalledWith('valid-bootstrap-token')
+    expect(mockValidateBootstrapToken).toHaveBeenCalledWith(
+      'valid-bootstrap-token',
+    )
     expect(
       tokenValidationService.validateCredentialsToken,
     ).not.toHaveBeenCalled()
@@ -110,7 +117,9 @@ describe('OcpiAuthGuard', () => {
       mockGetAllAndOverride,
     )
 
-    const context = createMockExecutionContext({ authorization: 'Bearer some-token' })
+    const context = createMockExecutionContext({
+      authorization: 'Bearer some-token',
+    })
 
     await expect(guard.canActivate(context)).rejects.toThrow(
       UnauthorizedException,
@@ -142,7 +151,9 @@ describe('OcpiAuthGuard', () => {
 
     // Base64 encode 'test-token'
     const encodedToken = Buffer.from('test-token', 'utf-8').toString('base64')
-    const context = createMockExecutionContext({ authorization: `Token ${encodedToken}` })
+    const context = createMockExecutionContext({
+      authorization: `Token ${encodedToken}`,
+    })
 
     const result = await guard.canActivate(context)
 
@@ -170,7 +181,9 @@ describe('OcpiAuthGuard', () => {
 
     mockValidateToken.mockResolvedValue(mockParty)
 
-    const context = createMockExecutionContext({ authorization: 'Token test-token' })
+    const context = createMockExecutionContext({
+      authorization: 'Token test-token',
+    })
 
     const result = await guard.canActivate(context)
 
@@ -189,7 +202,9 @@ describe('OcpiAuthGuard', () => {
       tokenValidationService.validateCredentialsToken,
     ).mockImplementation(mockValidateToken)
 
-    const context = createMockExecutionContext({ authorization: 'Token test-token' })
+    const context = createMockExecutionContext({
+      authorization: 'Token test-token',
+    })
 
     await expect(guard.canActivate(context)).rejects.toThrow(
       UnauthorizedException,

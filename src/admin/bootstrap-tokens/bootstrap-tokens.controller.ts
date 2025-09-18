@@ -17,6 +17,7 @@ import {
   type CreateBootstrapTokenDto,
   CreateBootstrapTokenSchema,
 } from './dto/bootstrap-token.dto'
+import { SkipOcpiAuth } from '@/ocpi/common/decorators/skip-ocpi-auth.decorator'
 
 export interface AdminResponse<T = any> {
   success: boolean
@@ -32,6 +33,7 @@ function createAdminResponse<T>(data?: T, message?: string): AdminResponse<T> {
   }
 }
 
+@SkipOcpiAuth()
 @Controller('/admin/ocpi/bootstrap-tokens')
 export class BootstrapTokensController {
   readonly #service: BootstrapTokensService

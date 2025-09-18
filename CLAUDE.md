@@ -52,6 +52,7 @@ Always run these commands after making changes:
 - E2E tests: Located in `test/` directory
 - Use Jest as the testing framework
 - Maintain good test coverage
+- **Nock**: Use nock for mocking HTTP requests in integration tests
 
 ## TypeScript
 - Strict TypeScript configuration

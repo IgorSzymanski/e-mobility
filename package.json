@@ -30,7 +30,8 @@
     "test:setup": "pnpm docker:test:up && sleep 5 && pnpm db:test:migrate",
     "test:teardown": "pnpm docker:test:down",
     "db:test:migrate": "dotenv -e .env.test -- pnpx prisma migrate deploy",
-    "db:test:generate": "dotenv -e .env.test -- pnpx prisma generate"
+    "db:test:generate": "dotenv -e .env.test -- pnpx prisma generate",
+    "db:dev:seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
@@ -65,6 +66,7 @@
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
+    "nock": "^14.0.10",
     "prettier": "^3.4.2",
     "prisma": "^6.16.2",
     "source-map-support": "^0.5.21",
