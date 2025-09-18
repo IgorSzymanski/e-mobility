@@ -149,6 +149,19 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format for all 
 - **Benefits of immutability** - Prevents side effects, makes code more predictable, easier to test, and reduces bugs
 - **Test file exceptions** - Mutability in test files (`*.spec.ts`, `*.e2e-spec.ts`) is acceptable for test setup, mocking, and isolation
 
+## Logging Guidelines
+- **Use NestJS Logger exclusively** - Always use NestJS Logger instead of native console methods (`console.log`, `console.error`, `console.warn`, `console.info`, `console.debug`)
+- **Structured logging** - NestJS Logger provides proper log levels, context, timestamps, and formatting
+- **Logger initialization** - Initialize logger with class context: `private readonly logger = new Logger(ClassName.name)`
+- **Log level best practices**:
+  - `logger.error()` - For errors and exceptions
+  - `logger.warn()` - For warnings and potential issues
+  - `logger.log()` - For general information (equivalent to info level)
+  - `logger.debug()` - For debugging information
+  - `logger.verbose()` - For detailed tracing information
+- **Context preservation** - Include relevant context in log messages without exposing sensitive data
+- **Test file exceptions** - Console methods in test files (`*.spec.ts`, `*.e2e-spec.ts`) are acceptable for test debugging
+
 ## Error Handling Guidelines
 - **Use OCPI-compliant exceptions** - Always throw OCPI exceptions (OcpiClientException, OcpiServerException) instead of generic Error types
 - **Map HTTP errors appropriately** - Convert axios/HTTP errors to specific OCPI error types based on status codes:
@@ -156,7 +169,6 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format for all 
   - `404` → `OcpiUnknownLocationException` (resource not found)
   - `5xx` → `OcpiUnableToUseClientApiException` (external service errors)
   - Network errors → `OcpiNoMatchingEndpointsException` (connectivity issues)
-- **Use structured logging** - Replace `console.log/error` with NestJS Logger for proper log levels and context
 - **Type-safe error data access** - Use proper type assertions when accessing error response data (e.g., `error.response?.data as { status_message?: string }`)
 - **Preserve error context** - Include relevant details in error messages while avoiding exposure of sensitive information
 - **Consistent error propagation** - Don't swallow errors silently; either handle them appropriately or re-throw with better context

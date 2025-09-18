@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/require-await */
 // infrastructure/persistence/peers.repository.ts
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import {
   PrismaClient,
   OcpiPeerStatus,
@@ -35,6 +35,7 @@ const isValidOcpiRole = (role: string): role is OcpiRole => {
 
 @Injectable()
 export class PeersRepository {
+  private readonly logger = new Logger(PeersRepository.name)
   readonly #db: PrismaClient
   readonly #tokenGen: TokenGenerator
   constructor(
@@ -54,7 +55,7 @@ export class PeersRepository {
   ): z.infer<typeof CredentialsRoleSchema>[] {
     const result = RolesJsonSchema.safeParse(rolesJson)
     if (!result.success) {
-      console.warn('Invalid rolesJson format:', result.error)
+      this.logger.warn('Invalid rolesJson format', result.error)
       return []
     }
     return result.data
@@ -68,7 +69,7 @@ export class PeersRepository {
   ): OcpiModuleIdentifier | null {
     const result = OcpiModuleIdentifierSchema.safeParse(identifier)
     if (!result.success) {
-      console.warn('Invalid OCPI module identifier:', identifier)
+      this.logger.warn('Invalid OCPI module identifier', identifier)
       return null
     }
     return result.data
@@ -154,7 +155,7 @@ export class PeersRepository {
         // Validate the module identifier
         const moduleIdentifier = this.parseModuleIdentifier(e.identifier)
         if (!moduleIdentifier) {
-          console.warn(`Skipping invalid module identifier: ${e.identifier}`)
+          this.logger.warn('Skipping invalid module identifier', e.identifier)
           continue
         }
 

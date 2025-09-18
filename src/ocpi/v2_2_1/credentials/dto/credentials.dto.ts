@@ -30,19 +30,12 @@ export const CredentialsRoleSchema = z
   .strict()
 
 export const CredentialsSchema = z
-  .transform((a) => {
-    // console.log('CredentialsSchema', a)
-    return a
+  .object({
+    token: z.string(), // printable ASCII, sent Base64-encoded in header when used
+    url: z.string(), // absolute /versions URL
+    roles: z.array(CredentialsRoleSchema).readonly(),
   })
-  .pipe(
-    z
-      .object({
-        token: z.string(), // printable ASCII, sent Base64-encoded in header when used
-        url: z.string(), // absolute /versions URL
-        roles: z.array(CredentialsRoleSchema).readonly(),
-      })
-      .strict(),
-  )
+  .strict()
 
 export type CredentialsRoleDto = z.infer<typeof CredentialsRoleSchema>
 export type CredentialsDto = z.infer<typeof CredentialsSchema>
