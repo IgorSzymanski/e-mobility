@@ -15,7 +15,13 @@ import {
   OcpiResponse,
   createOcpiSuccessResponse,
 } from '@/ocpi/v2_2_1/common/ocpi-envelope'
+import { OcpiEndpoint } from '@/ocpi/common/decorators/ocpi-endpoint.decorator'
 
+@OcpiEndpoint({
+  identifier: 'credentials',
+  version: '2.2.1',
+  roles: ['cpo', 'emsp'],
+})
 @Controller('/ocpi/:role/2.2.1/credentials')
 export class CredentialsController221 {
   readonly #svc: CredentialsService221

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { PrismaClient } from '@prisma/client'
 import { PeersRepository } from './peers.repository'
+import { OcpiConfigService } from '@/shared/config/ocpi.config'
 import type { CredentialsDto } from '@/ocpi/v2_2_1/credentials/dto/credentials.dto'
 
 describe('PeersRepository Integration Tests', () => {
@@ -34,12 +35,29 @@ describe('PeersRepository Integration Tests', () => {
       },
     })
 
+    const mockOcpiConfig = {
+      getEndpointUrl: vi.fn().mockImplementation((role, version, identifier) =>
+        `http://localhost:3000/ocpi/${role}/${version}/${identifier}`
+      ),
+      getBaseUrl: vi.fn().mockReturnValue('http://localhost:3000'),
+      getOurToken: vi.fn().mockReturnValue('our-test-token'),
+      getOurCredentials: vi.fn().mockReturnValue({
+        token: 'our-test-token',
+        url: 'http://localhost:3000/ocpi/versions',
+        roles: [],
+      }),
+    }
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PeersRepository,
         {
           provide: PrismaClient,
           useValue: prisma,
+        },
+        {
+          provide: OcpiConfigService,
+          useValue: mockOcpiConfig,
         },
       ],
     }).compile()

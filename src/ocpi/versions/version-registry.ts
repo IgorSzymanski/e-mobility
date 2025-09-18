@@ -1,6 +1,7 @@
 // src/ocpi/versions/version-registry.ts
 import { Injectable } from '@nestjs/common'
 import { OcpiConfigService } from '@/shared/config/ocpi.config'
+import { EndpointDiscoveryService } from './endpoint-discovery.service'
 
 export type OcpiVersion = '2.2.1' | '2.3.0'
 export type OcpiRole = 'cpo' | 'emsp'
@@ -24,72 +25,77 @@ export interface VersionDetails {
 }
 
 export type VersionCatalog = {
-  readonly [role in OcpiRole]: ReadonlyArray<VersionDetails>
+  readonly [role in OcpiRole]: readonly VersionDetails[]
 }
 
 @Injectable()
 export class VersionRegistryService {
-  constructor(private readonly ocpiConfig: OcpiConfigService) {}
+  constructor(
+    private readonly ocpiConfig: OcpiConfigService,
+    private readonly endpointDiscovery: EndpointDiscoveryService,
+  ) {}
 
   getVersionCatalog(): VersionCatalog {
-    return Object.freeze({
-      emsp: [
-        {
-          version: '2.3.0',
-          endpoints: [
+    const catalog: Record<OcpiRole, readonly VersionDetails[]> = {
+      cpo: [],
+      emsp: [],
+    }
+
+    // Dynamically build catalog from discovered endpoints
+    for (const role of ['cpo', 'emsp'] as const) {
+      const roleVersions: VersionDetails[] = []
+
+      for (const version of ['2.2.1', '2.3.0'] as const) {
+        const discoveredEndpoints =
+          this.endpointDiscovery.getAvailableEndpoints(role, version)
+
+        if (discoveredEndpoints.length > 0) {
+          // Always include the versions endpoint for each supported version
+          const endpoints: ModuleDescriptor[] = [
             {
               identifier: 'versions',
-              url: this.ocpiConfig.getEndpointUrl('emsp', '2.3.0', 'versions'),
+              url: this.ocpiConfig.getEndpointUrl(role, version, 'versions'),
             },
-            {
-              identifier: 'credentials',
-              url: this.ocpiConfig.getEndpointUrl(
-                'emsp',
-                '2.3.0',
-                'credentials',
-              ),
-            },
-            {
-              identifier: 'commands',
-              url: this.ocpiConfig.getEndpointUrl('emsp', '2.3.0', 'commands'),
-            },
-            {
-              identifier: 'sessions',
-              url: this.ocpiConfig.getEndpointUrl('emsp', '2.3.0', 'sessions'),
-            },
-            // ...
-          ],
-        },
-        {
-          version: '2.2.1',
-          endpoints: [
-            {
-              identifier: 'versions',
-              url: this.ocpiConfig.getEndpointUrl('emsp', '2.2.1', 'versions'),
-            },
-            {
-              identifier: 'credentials',
-              url: this.ocpiConfig.getEndpointUrl(
-                'emsp',
-                '2.2.1',
-                'credentials',
-              ),
-            },
-            {
-              identifier: 'commands',
-              url: this.ocpiConfig.getEndpointUrl('emsp', '2.2.1', 'commands'),
-            },
-            {
-              identifier: 'sessions',
-              url: this.ocpiConfig.getEndpointUrl('emsp', '2.2.1', 'sessions'),
-            },
-            // ...
-          ],
-        },
-      ],
-      cpo: [
-        // same for CPO role...
-      ],
-    })
+            ...discoveredEndpoints,
+          ]
+
+          roleVersions.push({
+            version,
+            endpoints: Object.freeze(endpoints),
+          })
+        }
+      }
+
+      if (roleVersions.length > 0) {
+        catalog[role] = Object.freeze(roleVersions)
+      }
+    }
+
+    return Object.freeze(catalog) as VersionCatalog
+  }
+
+  getSupportedVersions(role: OcpiRole): readonly OcpiVersion[] {
+    return this.endpointDiscovery.getSupportedVersions(role)
+  }
+
+  hasEndpoint(
+    role: OcpiRole,
+    version: OcpiVersion,
+    identifier: ModuleDescriptor['identifier'],
+  ): boolean {
+    return this.endpointDiscovery.hasEndpoint(role, version, identifier)
+  }
+
+  getEndpointUrl(
+    role: OcpiRole,
+    version: OcpiVersion,
+    identifier: ModuleDescriptor['identifier'],
+  ): string | null {
+    const endpoints = this.endpointDiscovery.getAvailableEndpoints(
+      role,
+      version,
+    )
+    const endpoint = endpoints.find((ep) => ep.identifier === identifier)
+    return endpoint?.url || null
   }
 }
