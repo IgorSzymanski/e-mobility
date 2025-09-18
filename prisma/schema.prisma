@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["ocpi"]
+}
+
+// OCPI Enums
+enum OcpiPeerStatus {
+  REGISTERED
+  PENDING
+  REVOKED
+
+  @@schema("ocpi")
+}
+
+enum OcpiRole {
+  cpo
+  emsp
+
+  @@schema("ocpi")
+}
+
+enum OcpiVersion {
+  v2_2_1 @map("2.2.1")
+  v2_3_0 @map("2.3.0")
+
+  @@schema("ocpi")
+}
+
+enum OcpiModuleIdentifier {
+  sessions
+  cdrs
+  locations
+  tokens
+  commands
+  tariffs
+  credentials
+  versions
+
+  @@schema("ocpi")
+}
+
+// OCPI Peer (Partner) Model
+model OcpiPeer {
+  id                String            @id @default(cuid())
+  countryCode       String            @map("country_code") @db.Char(2)
+  partyId           String            @map("party_id") @db.Char(3)
+  baseVersionsUrl   String            @map("base_versions_url") @db.VarChar(512)
+  rolesJson         Json              @map("roles_json")
+  chosenVersion     OcpiVersion       @map("chosen_version")
+  ourTokenForPeer   String            @map("our_token_for_peer") @db.VarChar(128)
+  peerTokenForUs    String            @map("peer_token_for_us") @db.VarChar(128)
+  status            OcpiPeerStatus
+  lastUpdated       DateTime          @map("last_updated") @updatedAt
+  createdAt         DateTime          @map("created_at") @default(now())
+
+  // Relations
+  endpoints         OcpiPeerEndpoint[]
+
+  @@unique([countryCode, partyId], name: "uq_party")
+  @@index([status])
+  @@index([chosenVersion])
+  @@map("peers")
+  @@schema("ocpi")
+}
+
+// OCPI Peer Endpoints Model
+model OcpiPeerEndpoint {
+  peerId     String                @map("peer_id")
+  module     OcpiModuleIdentifier
+  role       OcpiRole
+  url        String                @db.VarChar(1024)
+
+  // Relations
+  peer       OcpiPeer              @relation(fields: [peerId], references: [id], onDelete: Cascade)
+
+  @@id([peerId, module, role])
+  @@map("peer_endpoints")
+  @@schema("ocpi")
+}
+
+// OCPI Version Details Model (for static version catalog)
+model OcpiVersionDetail {
+  id        String                @id @default(cuid())
+  role      OcpiRole
+  version   OcpiVersion
+  createdAt DateTime              @map("created_at") @default(now())
+  updatedAt DateTime              @map("updated_at") @updatedAt
+
+  // Relations
+  endpoints OcpiModuleEndpoint[]
+
+  @@unique([role, version])
+  @@index([role])
+  @@index([version])
+  @@map("version_details")
+  @@schema("ocpi")
+}
+
+// OCPI Module Endpoints Model (for version catalog endpoints)
+model OcpiModuleEndpoint {
+  id              String                @id @default(cuid())
+  versionDetailId String                @map("version_detail_id")
+  identifier      OcpiModuleIdentifier
+  url             String                @db.VarChar(1024)
+
+  // Relations
+  versionDetail   OcpiVersionDetail     @relation(fields: [versionDetailId], references: [id], onDelete: Cascade)
+
+  @@unique([versionDetailId, identifier])
+  @@map("module_endpoints")
+  @@schema("ocpi")
+}
