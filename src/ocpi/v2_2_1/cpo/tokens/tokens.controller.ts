@@ -9,12 +9,19 @@ import {
   UseGuards,
   UsePipes,
 } from '@nestjs/common'
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger'
 import { z } from 'zod'
-import { TokenService } from '../services/token.service'
+import { TokenService } from '../../common/tokens/services/token.service'
 import { Token } from '@/domain/tokens/token.aggregate'
 import { TokenType, WhitelistType } from '@/domain/tokens/enums/token-enums'
-import type { TokenDto } from '../dto/token.dto'
-import { TokenDtoSchema } from '../dto/token.dto'
+import type { TokenDto } from '../../common/tokens/dto/token.dto'
+import { TokenDtoSchema } from '../../common/tokens/dto/token.dto'
 import type { OcpiResponse } from '@/ocpi/v2_2_1/common/ocpi-envelope'
 import { createOcpiSuccessResponse } from '@/ocpi/v2_2_1/common/ocpi-envelope'
 import { OcpiEndpoint } from '@/ocpi/common/decorators/ocpi-endpoint.decorator'
@@ -48,6 +55,7 @@ const TokenPatchSchema = z.object({
 
 type TokenPatch = z.infer<typeof TokenPatchSchema>
 
+@ApiTags('OCPI Tokens (CPO)')
 @UseGuards(OcpiAuthGuard)
 @OcpiEndpoint({
   identifier: 'tokens',
@@ -65,6 +73,39 @@ export class TokensCpoController {
    * GET /ocpi/cpo/2.2.1/tokens/{country_code}/{party_id}/{token_uid}[?type={type}]
    * Retrieve a Token as it is stored in the CPO system.
    */
+  @ApiOperation({
+    summary: 'Get Token',
+    description: 'Retrieve a Token as it is stored in the CPO system.',
+  })
+  @ApiParam({
+    name: 'countryCode',
+    description: 'Country code (ISO 3166-1 alpha-2)',
+    example: 'NL',
+  })
+  @ApiParam({
+    name: 'partyId',
+    description: 'Party ID (3 characters)',
+    example: 'TNM',
+  })
+  @ApiParam({
+    name: 'tokenUid',
+    description: 'Token UID (max 36 characters)',
+    example: 'DEADBEEF',
+  })
+  @ApiQuery({
+    name: 'type',
+    description: 'Token type',
+    enum: TokenType,
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Token not found',
+  })
   @Get(':countryCode/:partyId/:tokenUid')
   async getToken(
     @Param('countryCode') countryCode: string,
@@ -84,6 +125,33 @@ export class TokensCpoController {
    * PUT /ocpi/cpo/2.2.1/tokens/{country_code}/{party_id}/{token_uid}
    * Push new/updated Token object to the CPO.
    */
+  @ApiOperation({
+    summary: 'Create or Update Token',
+    description: 'Push new/updated Token object to the CPO.',
+  })
+  @ApiParam({
+    name: 'countryCode',
+    description: 'Country code (ISO 3166-1 alpha-2)',
+    example: 'NL',
+  })
+  @ApiParam({
+    name: 'partyId',
+    description: 'Party ID (3 characters)',
+    example: 'TNM',
+  })
+  @ApiParam({
+    name: 'tokenUid',
+    description: 'Token UID (max 36 characters)',
+    example: 'DEADBEEF',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token created or updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid parameters or token data',
+  })
   @Put(':countryCode/:partyId/:tokenUid')
   @UsePipes(new ZodValidationPipe(TokenDtoSchema))
   async putToken(
@@ -122,6 +190,43 @@ export class TokensCpoController {
    * PATCH /ocpi/cpo/2.2.1/tokens/{country_code}/{party_id}/{token_uid}
    * Notify the CPO of partial updates to a Token.
    */
+  @ApiOperation({
+    summary: 'Partially Update Token',
+    description: 'Notify the CPO of partial updates to a Token.',
+  })
+  @ApiParam({
+    name: 'countryCode',
+    description: 'Country code (ISO 3166-1 alpha-2)',
+    example: 'NL',
+  })
+  @ApiParam({
+    name: 'partyId',
+    description: 'Party ID (3 characters)',
+    example: 'TNM',
+  })
+  @ApiParam({
+    name: 'tokenUid',
+    description: 'Token UID (max 36 characters)',
+    example: 'DEADBEEF',
+  })
+  @ApiQuery({
+    name: 'type',
+    description: 'Token type',
+    enum: TokenType,
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid parameters or patch data',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Token not found',
+  })
   @Patch(':countryCode/:partyId/:tokenUid')
   async patchToken(
     @Param('countryCode') countryCode: string,

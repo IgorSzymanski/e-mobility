@@ -69,7 +69,10 @@ export class Image {
     }
   }
 
-  equals(other: Image): boolean {
+  equals(other?: Image): boolean {
+    if (!other) {
+      return false
+    }
     return (
       this._url === other._url &&
       this._category === other._category &&

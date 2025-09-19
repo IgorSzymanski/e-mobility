@@ -1,19 +1,19 @@
 import { Injectable, Inject } from '@nestjs/common'
-import { Token } from '../../../../domain/tokens/token.aggregate'
-import { TokenId } from '../../../../domain/tokens/value-objects/token-id'
-import { LocationReferences } from '../../../../domain/tokens/value-objects/location-references'
-import { AuthorizationInfo } from '../../../../domain/tokens/value-objects/authorization-info'
+import { Token } from '@/domain/tokens/token.aggregate'
+import { TokenId } from '@/domain/tokens/value-objects/token-id'
+import { LocationReferences } from '@/domain/tokens/value-objects/location-references'
+import { AuthorizationInfo } from '@/domain/tokens/value-objects/authorization-info'
 import {
   TokenType,
   WhitelistType,
   AllowedType,
-} from '../../../../domain/tokens/enums/token-enums'
+} from '@/domain/tokens/enums/token-enums'
 import type {
   TokenRepository,
   FindTokensParams,
   FindTokensResult,
 } from '../repositories/token.repository'
-import { OcpiUnknownTokenException } from '../../../../shared/exceptions/ocpi.exceptions'
+import { OcpiUnknownTokenException } from '@/shared/exceptions/ocpi.exceptions'
 
 @Injectable()
 export class TokenService {

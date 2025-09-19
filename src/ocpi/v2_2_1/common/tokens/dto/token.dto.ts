@@ -3,7 +3,7 @@ import {
   TokenType,
   WhitelistType,
   AllowedType,
-} from '../../../../domain/tokens/enums/token-enums'
+} from '@/domain/tokens/enums/token-enums'
 
 // OCPI Token DTO Schema
 export const TokenDtoSchema = z.object({

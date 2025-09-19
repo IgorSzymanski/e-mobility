@@ -1,6 +1,6 @@
-import { Token } from '../../../../domain/tokens/token.aggregate'
-import { TokenId } from '../../../../domain/tokens/value-objects/token-id'
-import { TokenType } from '../../../../domain/tokens/enums/token-enums'
+import { Token } from '@/domain/tokens/token.aggregate'
+import { TokenId } from '@/domain/tokens/value-objects/token-id'
+import { TokenType } from '@/domain/tokens/enums/token-enums'
 
 export interface TokenRepository {
   /**

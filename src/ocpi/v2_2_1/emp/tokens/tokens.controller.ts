@@ -8,8 +8,15 @@ import {
   UseGuards,
   UsePipes,
 } from '@nestjs/common'
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger'
 import { z } from 'zod'
-import { TokenService } from '../services/token.service'
+import { TokenService } from '../../common/tokens/services/token.service'
 import { TokenType } from '@/domain/tokens/enums/token-enums'
 import { LocationReferences } from '@/domain/tokens/value-objects/location-references'
 import type {
@@ -17,11 +24,11 @@ import type {
   AuthorizeRequestDto,
   AuthorizationResponseDto,
   TokenListQuery,
-} from '../dto/token.dto'
+} from '../../common/tokens/dto/token.dto'
 import {
   TokenListQuerySchema,
   AuthorizeRequestDtoSchema,
-} from '../dto/token.dto'
+} from '../../common/tokens/dto/token.dto'
 import type { OcpiResponse } from '@/ocpi/v2_2_1/common/ocpi-envelope'
 import { createOcpiSuccessResponse } from '@/ocpi/v2_2_1/common/ocpi-envelope'
 import { OcpiEndpoint } from '@/ocpi/common/decorators/ocpi-endpoint.decorator'
@@ -35,6 +42,7 @@ const TokenUidSchema = z
   .min(1, 'Token UID cannot be empty')
   .max(36, 'Token UID must be max 36 characters')
 
+@ApiTags('OCPI Tokens (eMSP)')
 @UseGuards(OcpiAuthGuard)
 @OcpiEndpoint({
   identifier: 'tokens',
@@ -52,6 +60,36 @@ export class TokensEmspController {
    * GET /ocpi/emsp/2.2.1/tokens?[date_from={date_from}][&date_to={date_to}][&offset={offset}][&limit={limit}]
    * Get list of all tokens, or a filtered list of tokens.
    */
+  @ApiOperation({
+    summary: 'Get Tokens',
+    description: 'Get list of all tokens, or a filtered list of tokens.',
+  })
+  @ApiQuery({
+    name: 'date_from',
+    description: 'Filter tokens updated after this date',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'date_to',
+    description: 'Filter tokens updated before this date',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'offset',
+    description: 'Number of objects to skip',
+    required: false,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Maximum number of objects to return',
+    required: false,
+    type: Number,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of tokens retrieved successfully',
+  })
   @Get()
   @UsePipes(new ZodValidationPipe(TokenListQuerySchema))
   async getTokens(
@@ -75,6 +113,33 @@ export class TokensEmspController {
    * POST /ocpi/emsp/2.2.1/tokens/{token_uid}/authorize[?type={type}]
    * Real-time authorization request for the given Token uid.
    */
+  @ApiOperation({
+    summary: 'Authorize Token',
+    description: 'Real-time authorization request for the given Token uid.',
+  })
+  @ApiParam({
+    name: 'tokenUid',
+    description: 'Token UID (max 36 characters)',
+    example: 'DEADBEEF',
+  })
+  @ApiQuery({
+    name: 'type',
+    description: 'Token type',
+    enum: TokenType,
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Authorization response',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid token UID or request data',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Token not found',
+  })
   @Post(':tokenUid/authorize')
   @UsePipes(new ZodValidationPipe(AuthorizeRequestDtoSchema))
   async authorizeToken(

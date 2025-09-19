@@ -32,7 +32,7 @@ import { ZodValidationPipe } from 'nestjs-zod'
   roles: ['cpo', 'emsp'],
 })
 @Controller('/ocpi/:role/2.2.1/credentials')
-export class CredentialsController221 {
+export class CredentialsController {
   readonly #svc: CredentialsService221
   constructor(svc: CredentialsService221) {
     this.#svc = svc
