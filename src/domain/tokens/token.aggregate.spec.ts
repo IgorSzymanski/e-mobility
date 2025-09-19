@@ -203,8 +203,12 @@ describe('Token', () => {
       const invalidatedToken = token.invalidate()
       const afterTime = Date.now()
 
-      expect(invalidatedToken.lastUpdated.getTime()).toBeGreaterThanOrEqual(beforeTime)
-      expect(invalidatedToken.lastUpdated.getTime()).toBeLessThanOrEqual(afterTime)
+      expect(invalidatedToken.lastUpdated.getTime()).toBeGreaterThanOrEqual(
+        beforeTime,
+      )
+      expect(invalidatedToken.lastUpdated.getTime()).toBeLessThanOrEqual(
+        afterTime,
+      )
     })
   })
 

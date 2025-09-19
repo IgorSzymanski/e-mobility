@@ -11,7 +11,13 @@ describe('Token Enums', () => {
     })
 
     it('should have all required values', () => {
-      const expectedValues = ['ALLOWED', 'BLOCKED', 'EXPIRED', 'NO_CREDIT', 'NOT_ALLOWED']
+      const expectedValues = [
+        'ALLOWED',
+        'BLOCKED',
+        'EXPIRED',
+        'NO_CREDIT',
+        'NOT_ALLOWED',
+      ]
       const actualValues = Object.values(AllowedType)
 
       expect(actualValues).toEqual(expect.arrayContaining(expectedValues))

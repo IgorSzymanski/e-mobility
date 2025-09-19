@@ -34,15 +34,15 @@ describe('LocationReferences', () => {
     })
 
     it('should throw error for empty EVSE UIDs in array', () => {
-      expect(() => new LocationReferences('LOC001', ['EVSE001', '', 'EVSE003'])).toThrow(
-        OcpiInvalidParametersException,
-      )
+      expect(
+        () => new LocationReferences('LOC001', ['EVSE001', '', 'EVSE003']),
+      ).toThrow(OcpiInvalidParametersException)
     })
 
     it('should throw error for EVSE UID too long', () => {
-      expect(() => new LocationReferences('LOC001', ['EVSE001', 'a'.repeat(37)])).toThrow(
-        OcpiInvalidParametersException,
-      )
+      expect(
+        () => new LocationReferences('LOC001', ['EVSE001', 'a'.repeat(37)]),
+      ).toThrow(OcpiInvalidParametersException)
     })
   })
 
@@ -71,13 +71,19 @@ describe('LocationReferences', () => {
     })
 
     it('should return true for allowed EVSE when restrictions exist', () => {
-      const locationRef = new LocationReferences('LOC001', ['EVSE001', 'EVSE002'])
+      const locationRef = new LocationReferences('LOC001', [
+        'EVSE001',
+        'EVSE002',
+      ])
       expect(locationRef.isEvseAllowed('EVSE001')).toBe(true)
       expect(locationRef.isEvseAllowed('EVSE002')).toBe(true)
     })
 
     it('should return false for non-allowed EVSE when restrictions exist', () => {
-      const locationRef = new LocationReferences('LOC001', ['EVSE001', 'EVSE002'])
+      const locationRef = new LocationReferences('LOC001', [
+        'EVSE001',
+        'EVSE002',
+      ])
       expect(locationRef.isEvseAllowed('EVSE003')).toBe(false)
       expect(locationRef.isEvseAllowed('EVSE999')).toBe(false)
     })
@@ -92,7 +98,10 @@ describe('LocationReferences', () => {
     })
 
     it('should filter EVSEs based on restrictions', () => {
-      const locationRef = new LocationReferences('LOC001', ['EVSE001', 'EVSE003'])
+      const locationRef = new LocationReferences('LOC001', [
+        'EVSE001',
+        'EVSE003',
+      ])
       const allEvses = ['EVSE001', 'EVSE002', 'EVSE003', 'EVSE004']
 
       expect(locationRef.filterEvses(allEvses)).toEqual(['EVSE001', 'EVSE003'])
@@ -108,8 +117,14 @@ describe('LocationReferences', () => {
 
   describe('equals', () => {
     it('should return true for equal LocationReferences', () => {
-      const locationRef1 = new LocationReferences('LOC001', ['EVSE001', 'EVSE002'])
-      const locationRef2 = new LocationReferences('LOC001', ['EVSE001', 'EVSE002'])
+      const locationRef1 = new LocationReferences('LOC001', [
+        'EVSE001',
+        'EVSE002',
+      ])
+      const locationRef2 = new LocationReferences('LOC001', [
+        'EVSE001',
+        'EVSE002',
+      ])
 
       expect(locationRef1.equals(locationRef2)).toBe(true)
     })
@@ -130,7 +145,10 @@ describe('LocationReferences', () => {
 
     it('should return false for different EVSE UID array lengths', () => {
       const locationRef1 = new LocationReferences('LOC001', ['EVSE001'])
-      const locationRef2 = new LocationReferences('LOC001', ['EVSE001', 'EVSE002'])
+      const locationRef2 = new LocationReferences('LOC001', [
+        'EVSE001',
+        'EVSE002',
+      ])
 
       expect(locationRef1.equals(locationRef2)).toBe(false)
     })

@@ -18,10 +18,7 @@ const TokenSchema = z.object({
     .string()
     .max(64, 'Visual number must be max 64 characters')
     .optional(),
-  groupId: z
-    .string()
-    .max(36, 'Group ID must be max 36 characters')
-    .optional(),
+  groupId: z.string().max(36, 'Group ID must be max 36 characters').optional(),
   language: z
     .string()
     .length(2, 'Language must be exactly 2 characters (ISO 639-1)')
@@ -146,5 +143,65 @@ export class Token {
 
   equals(other: Token): boolean {
     return this._id.equals(other._id)
+  }
+
+  toDto(): {
+    country_code: string
+    party_id: string
+    uid: string
+    type: TokenType
+    contract_id: string
+    visual_number?: string
+    issuer: string
+    group_id?: string
+    valid: boolean
+    whitelist: WhitelistType
+    language?: string
+    last_updated: string
+  } {
+    return {
+      country_code: this._id.countryCode,
+      party_id: this._id.partyId,
+      uid: this._id.uid,
+      type: this._type,
+      contract_id: this._contractId,
+      visual_number: this._visualNumber,
+      issuer: this._issuer,
+      group_id: this._groupId,
+      valid: this._valid,
+      whitelist: this._whitelist,
+      language: this._language,
+      last_updated: this._lastUpdated.toISOString(),
+    }
+  }
+
+  static fromDto(dto: {
+    country_code: string
+    party_id: string
+    uid: string
+    type: TokenType
+    contract_id: string
+    visual_number?: string
+    issuer: string
+    group_id?: string
+    valid: boolean
+    whitelist: WhitelistType
+    language?: string
+    last_updated: string
+  }): Token {
+    const tokenId = new TokenId(dto.country_code, dto.party_id, dto.uid)
+
+    return new Token(
+      tokenId,
+      dto.type,
+      dto.contract_id,
+      dto.issuer,
+      dto.valid,
+      dto.whitelist,
+      new Date(dto.last_updated),
+      dto.visual_number,
+      dto.group_id,
+      dto.language,
+    )
   }
 }

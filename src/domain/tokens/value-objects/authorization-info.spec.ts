@@ -28,7 +28,10 @@ describe('AuthorizationInfo', () => {
 
     it('should create AuthorizationInfo with complete data', () => {
       const location = new LocationReferences('LOC001', ['EVSE001', 'EVSE002'])
-      const displayText = { language: 'en', text: 'Welcome! You have sufficient credit.' }
+      const displayText = {
+        language: 'en',
+        text: 'Welcome! You have sufficient credit.',
+      }
 
       const authInfo = new AuthorizationInfo(
         AllowedType.ALLOWED,
@@ -46,34 +49,43 @@ describe('AuthorizationInfo', () => {
     })
 
     it('should throw error for invalid authorization reference', () => {
-      expect(() =>
-        new AuthorizationInfo(AllowedType.ALLOWED, mockToken, undefined, '')
+      expect(
+        () =>
+          new AuthorizationInfo(AllowedType.ALLOWED, mockToken, undefined, ''),
       ).toThrow(OcpiInvalidParametersException)
 
-      expect(() =>
-        new AuthorizationInfo(AllowedType.ALLOWED, mockToken, undefined, 'a'.repeat(37))
+      expect(
+        () =>
+          new AuthorizationInfo(
+            AllowedType.ALLOWED,
+            mockToken,
+            undefined,
+            'a'.repeat(37),
+          ),
       ).toThrow(OcpiInvalidParametersException)
     })
 
     it('should throw error for invalid display text', () => {
-      expect(() =>
-        new AuthorizationInfo(
-          AllowedType.ALLOWED,
-          mockToken,
-          undefined,
-          undefined,
-          { language: '', text: 'Valid text' }
-        )
+      expect(
+        () =>
+          new AuthorizationInfo(
+            AllowedType.ALLOWED,
+            mockToken,
+            undefined,
+            undefined,
+            { language: '', text: 'Valid text' },
+          ),
       ).toThrow(OcpiInvalidParametersException)
 
-      expect(() =>
-        new AuthorizationInfo(
-          AllowedType.ALLOWED,
-          mockToken,
-          undefined,
-          undefined,
-          { language: 'en', text: '' }
-        )
+      expect(
+        () =>
+          new AuthorizationInfo(
+            AllowedType.ALLOWED,
+            mockToken,
+            undefined,
+            undefined,
+            { language: 'en', text: '' },
+          ),
       ).toThrow(OcpiInvalidParametersException)
     })
   })
