@@ -152,3 +152,239 @@ model OcpiToken {
   @@map("tokens")
   @@schema("ocpi")
 }
+
+// OCPI Location Status Enums
+enum OcpiStatus {
+  AVAILABLE
+  BLOCKED
+  CHARGING
+  INOPERATIVE
+  OUTOFORDER
+  PLANNED
+  REMOVED
+  RESERVED
+  UNKNOWN
+
+  @@schema("ocpi")
+}
+
+enum OcpiCapability {
+  CHARGING_PROFILE_CAPABLE
+  CHARGING_PREFERENCES_CAPABLE
+  CHIP_CARD_SUPPORT
+  CONTACTLESS_CARD_SUPPORT
+  CREDIT_CARD_PAYABLE
+  DEBIT_CARD_PAYABLE
+  PED_TERMINAL
+  REMOTE_START_STOP_CAPABLE
+  RESERVABLE
+  RFID_READER
+  START_SESSION_CONNECTOR_REQUIRED
+  TOKEN_GROUP_CAPABLE
+  UNLOCK_CAPABLE
+
+  @@schema("ocpi")
+}
+
+enum OcpiConnectorType {
+  CHADEMO
+  CHAOJI
+  DOMESTIC_A
+  DOMESTIC_B
+  DOMESTIC_C
+  DOMESTIC_D
+  DOMESTIC_E
+  DOMESTIC_F
+  DOMESTIC_G
+  DOMESTIC_H
+  DOMESTIC_I
+  DOMESTIC_J
+  DOMESTIC_K
+  DOMESTIC_L
+  DOMESTIC_M
+  DOMESTIC_N
+  DOMESTIC_O
+  GBT_AC
+  GBT_DC
+  IEC_60309_2_single_16
+  IEC_60309_2_three_16
+  IEC_60309_2_three_32
+  IEC_60309_2_three_64
+  IEC_62196_T1
+  IEC_62196_T1_COMBO
+  IEC_62196_T2
+  IEC_62196_T2_COMBO
+  IEC_62196_T3A
+  IEC_62196_T3C
+  NEMA_5_20
+  NEMA_6_30
+  NEMA_6_50
+  NEMA_10_30
+  NEMA_10_50
+  NEMA_14_30
+  NEMA_14_50
+  PANTOGRAPH_BOTTOM_UP
+  PANTOGRAPH_TOP_DOWN
+  TESLA_R
+  TESLA_S
+
+  @@schema("ocpi")
+}
+
+enum OcpiConnectorFormat {
+  SOCKET
+  CABLE
+
+  @@schema("ocpi")
+}
+
+enum OcpiPowerType {
+  AC_1_PHASE
+  AC_2_PHASE
+  AC_2_PHASE_SPLIT
+  AC_3_PHASE
+  DC
+
+  @@schema("ocpi")
+}
+
+enum OcpiParkingType {
+  ALONG_MOTORWAY
+  PARKING_GARAGE
+  PARKING_LOT
+  ON_DRIVEWAY
+  ON_STREET
+  UNDERGROUND_GARAGE
+
+  @@schema("ocpi")
+}
+
+enum OcpiParkingRestriction {
+  EV_ONLY
+  PLUGGED
+  DISABLED
+  CUSTOMERS
+  MOTORCYCLES
+
+  @@schema("ocpi")
+}
+
+enum OcpiFacility {
+  HOTEL
+  RESTAURANT
+  CAFE
+  MALL
+  SUPERMARKET
+  SPORT
+  RECREATION_AREA
+  NATURE
+  MUSEUM
+  BIKE_SHARING
+  BUS_STOP
+  TAXI_STAND
+  TRAM_STOP
+  METRO_STATION
+  TRAIN_STATION
+  AIRPORT
+  PARKING_LOT
+  CARPOOL_PARKING
+  FUEL_STATION
+  WIFI
+
+  @@schema("ocpi")
+}
+
+// OCPI Location Model
+model OcpiLocation {
+  id                String                @id @default(cuid())
+  countryCode       String                @map("country_code") @db.Char(2)
+  partyId           String                @map("party_id") @db.Char(3)
+  locationId        String                @map("location_id") @db.VarChar(36)
+  publish           Boolean
+  publishAllowedTo  Json?                 @map("publish_allowed_to")
+  name              String?               @db.VarChar(255)
+  address           String                @db.VarChar(45)
+  city              String                @db.VarChar(45)
+  postalCode        String?               @map("postal_code") @db.VarChar(10)
+  state             String?               @db.VarChar(20)
+  country           String                @db.Char(3)
+  coordinates       Json                  // {latitude: string, longitude: string}
+  relatedLocations  Json?                 @map("related_locations")
+  parkingType       OcpiParkingType?      @map("parking_type")
+  directions        Json?                 // Array of DisplayText
+  operator          Json?                 // BusinessDetails
+  suboperator       Json?                 // BusinessDetails
+  owner             Json?                 // BusinessDetails
+  facilities        OcpiFacility[]
+  timeZone          String                @map("time_zone") @db.VarChar(255)
+  openingTimes      Json?                 @map("opening_times") // Hours object
+  chargingWhenClosed Boolean?             @map("charging_when_closed")
+  images            Json?                 // Array of Image
+  energyMix         Json?                 @map("energy_mix") // EnergyMix object
+  lastUpdated       DateTime              @map("last_updated") @updatedAt
+  createdAt         DateTime              @map("created_at") @default(now())
+
+  // Relations
+  evses             OcpiEvse[]
+
+  @@unique([countryCode, partyId, locationId], name: "uq_location")
+  @@index([lastUpdated])
+  @@index([publish])
+  @@index([countryCode, partyId])
+  @@map("locations")
+  @@schema("ocpi")
+}
+
+// OCPI EVSE Model
+model OcpiEvse {
+  id                String                    @id @default(cuid())
+  locationDbId      String                    @map("location_db_id")
+  uid               String                    @db.VarChar(36)
+  evseId            String?                   @map("evse_id") @db.VarChar(48)
+  status            OcpiStatus
+  statusSchedule    Json?                     @map("status_schedule") // Array of StatusSchedule
+  capabilities      OcpiCapability[]
+  floorLevel        String?                   @map("floor_level") @db.VarChar(4)
+  coordinates       Json?                     // {latitude: string, longitude: string}
+  physicalReference String?                   @map("physical_reference") @db.VarChar(16)
+  directions        Json?                     // Array of DisplayText
+  parkingRestrictions OcpiParkingRestriction[] @map("parking_restrictions")
+  images            Json?                     // Array of Image
+  lastUpdated       DateTime                  @map("last_updated") @updatedAt
+  createdAt         DateTime                  @map("created_at") @default(now())
+
+  // Relations
+  location          OcpiLocation              @relation(fields: [locationDbId], references: [id], onDelete: Cascade)
+  connectors        OcpiConnector[]
+
+  @@unique([locationDbId, uid], name: "uq_evse")
+  @@index([status])
+  @@index([lastUpdated])
+  @@map("evses")
+  @@schema("ocpi")
+}
+
+// OCPI Connector Model
+model OcpiConnector {
+  id                String              @id @default(cuid())
+  evseDbId          String              @map("evse_db_id")
+  connectorId       String              @map("connector_id") @db.VarChar(36)
+  standard          OcpiConnectorType
+  format            OcpiConnectorFormat
+  powerType         OcpiPowerType       @map("power_type")
+  maxVoltage        Int                 @map("max_voltage")
+  maxAmperage       Int                 @map("max_amperage")
+  maxElectricPower  Int?                @map("max_electric_power")
+  tariffIds         String[]            @map("tariff_ids") @db.VarChar(36)
+  termsAndConditions String?            @map("terms_and_conditions") @db.VarChar(1024)
+  lastUpdated       DateTime            @map("last_updated") @updatedAt
+  createdAt         DateTime            @map("created_at") @default(now())
+
+  // Relations
+  evse              OcpiEvse            @relation(fields: [evseDbId], references: [id], onDelete: Cascade)
+
+  @@unique([evseDbId, connectorId], name: "uq_connector")
+  @@index([lastUpdated])
+  @@map("connectors")
+  @@schema("ocpi")
+}

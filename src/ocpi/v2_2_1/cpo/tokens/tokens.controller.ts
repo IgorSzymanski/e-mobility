@@ -50,7 +50,7 @@ const TokenPatchSchema = z.object({
   visual_number: z.string().max(64).optional(),
   group_id: z.string().max(36).optional(),
   language: z.string().length(2).optional(),
-  last_updated: z.string().datetime(), // Required for PATCH operations
+  last_updated: z.iso.datetime(), // Required for PATCH operations
 })
 
 type TokenPatch = z.infer<typeof TokenPatchSchema>

@@ -25,7 +25,7 @@ export const TokenDtoSchema = z.object({
       contract_id: z.string().max(64).optional(),
     })
     .optional(),
-  last_updated: z.string().datetime(),
+  last_updated: z.iso.datetime(),
 })
 
 export type TokenDto = z.infer<typeof TokenDtoSchema>
