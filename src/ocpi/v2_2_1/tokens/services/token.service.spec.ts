@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { TokenService } from './token.service'
-import { TokenRepository } from '../repositories/token.repository'
+// import { TokenRepository } from '../repositories/token.repository'
 import { Token } from '../../../../domain/tokens/token.aggregate'
 import { TokenId } from '../../../../domain/tokens/value-objects/token-id'
 import { LocationReferences } from '../../../../domain/tokens/value-objects/location-references'
@@ -13,7 +13,7 @@ import { OcpiUnknownTokenException } from '../../../../shared/exceptions/ocpi.ex
 
 describe('TokenService', () => {
   let service: TokenService
-  let mockTokenRepository: TokenRepository
+  let mockTokenRepository: any
 
   const validToken = new Token(
     new TokenId('NL', 'TNM', '012345678'),

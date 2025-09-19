@@ -69,7 +69,13 @@ export const TokenListQuerySchema = z.object({
 export type TokenListQuery = z.infer<typeof TokenListQuerySchema>
 
 export const AuthorizationResponseDtoSchema = z.object({
-  allowed: z.enum(['ALLOWED', 'BLOCKED', 'EXPIRED', 'NO_CREDIT', 'NOT_ALLOWED']),
+  allowed: z.enum([
+    'ALLOWED',
+    'BLOCKED',
+    'EXPIRED',
+    'NO_CREDIT',
+    'NOT_ALLOWED',
+  ]),
   token: TokenDtoSchema,
   location: LocationReferencesDtoSchema.optional(),
   authorization_reference: z.string().optional(),
@@ -81,4 +87,6 @@ export const AuthorizationResponseDtoSchema = z.object({
     .optional(),
 })
 
-export type AuthorizationResponseDto = z.infer<typeof AuthorizationResponseDtoSchema>
+export type AuthorizationResponseDto = z.infer<
+  typeof AuthorizationResponseDtoSchema
+>

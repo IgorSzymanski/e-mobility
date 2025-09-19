@@ -1,4 +1,4 @@
-import { Injectable, type Inject } from '@nestjs/common'
+import { Injectable, Inject } from '@nestjs/common'
 import { Token } from '../../../../domain/tokens/token.aggregate'
 import { TokenId } from '../../../../domain/tokens/value-objects/token-id'
 import { LocationReferences } from '../../../../domain/tokens/value-objects/location-references'
@@ -8,7 +8,7 @@ import {
   WhitelistType,
   AllowedType,
 } from '../../../../domain/tokens/enums/token-enums'
-import {
+import type {
   TokenRepository,
   FindTokensParams,
   FindTokensResult,

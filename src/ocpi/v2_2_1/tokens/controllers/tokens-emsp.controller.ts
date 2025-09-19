@@ -126,7 +126,7 @@ export class TokensEmspController {
       location: authInfo.location
         ? {
             location_id: authInfo.location.locationId,
-            evse_uids: authInfo.location.evseUids,
+            evse_uids: [...authInfo.location.evseUids],
           }
         : undefined,
       authorization_reference: authInfo.authorizationReference,

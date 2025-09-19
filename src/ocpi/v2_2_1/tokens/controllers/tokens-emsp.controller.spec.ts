@@ -16,7 +16,7 @@ import { OcpiAuthGuard } from '@/ocpi/common/guards/ocpi-auth.guard'
 
 describe('TokensEmspController', () => {
   let controller: TokensEmspController
-  let mockTokenService: TokenService
+  let mockTokenService: any
 
   const validToken = new Token(
     new TokenId('NL', 'TNM', '012345678'),
