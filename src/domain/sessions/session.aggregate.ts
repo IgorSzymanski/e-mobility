@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { SessionId } from './value-objects/session-id'
-import { EnergyMeasurement } from './value-objects/energy-measurement'
+// import { EnergyMeasurement } from './value-objects/energy-measurement' // TODO: Remove if not needed
 import { ChargingPeriod } from './value-objects/charging-period'
 import {
   OcpiInvalidParametersException,

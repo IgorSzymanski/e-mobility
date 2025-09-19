@@ -50,6 +50,25 @@ enum OcpiModuleIdentifier {
   @@schema("ocpi")
 }
 
+// OCPI Token Enums
+enum OcpiTokenType {
+  RFID
+  APP_USER
+  AD_HOC_USER
+  OTHER
+
+  @@schema("ocpi")
+}
+
+enum OcpiWhitelistType {
+  ALWAYS
+  ALLOWED
+  ALLOWED_OFFLINE
+  NEVER
+
+  @@schema("ocpi")
+}
+
 // OCPI Peer (Partner) Model
 model OcpiPeer {
   id                String            @id @default(cuid())
@@ -105,5 +124,31 @@ model OcpiBootstrapToken {
   @@index([expiresAt])
   @@index([usedAt])
   @@map("bootstrap_tokens")
+  @@schema("ocpi")
+}
+
+// OCPI Token Model
+model OcpiToken {
+  id           String             @id @default(cuid())
+  countryCode  String             @map("country_code") @db.Char(2)
+  partyId      String             @map("party_id") @db.Char(3)
+  uid          String             @db.VarChar(36)
+  type         OcpiTokenType
+  contractId   String             @map("contract_id") @db.VarChar(36)
+  visualNumber String?            @map("visual_number") @db.VarChar(64)
+  issuer       String             @db.VarChar(64)
+  groupId      String?            @map("group_id") @db.VarChar(36)
+  valid        Boolean
+  whitelist    OcpiWhitelistType
+  language     String?            @db.Char(2)
+  lastUpdated  DateTime           @map("last_updated") @updatedAt
+  createdAt    DateTime           @map("created_at") @default(now())
+
+  @@unique([countryCode, partyId, uid], name: "uq_token_id")
+  @@index([uid, type])
+  @@index([valid])
+  @@index([whitelist])
+  @@index([lastUpdated])
+  @@map("tokens")
   @@schema("ocpi")
 }

@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common'
+import { Injectable, type Inject } from '@nestjs/common'
 import { Token } from '../../../../domain/tokens/token.aggregate'
 import { TokenId } from '../../../../domain/tokens/value-objects/token-id'
 import { LocationReferences } from '../../../../domain/tokens/value-objects/location-references'
@@ -198,7 +198,9 @@ export class TokenService {
    * In real implementation, this would make HTTP call to eMSP
    */
   private performRealtimeAuthorization(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _token: Token,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _locationRef?: LocationReferences,
   ): AllowedType {
     // Simulate eMSP authorization logic

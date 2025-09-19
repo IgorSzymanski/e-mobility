@@ -9,6 +9,7 @@ import {
 } from '../../../../domain/tokens/enums/token-enums'
 import { TokenDto } from '../dto/token.dto'
 import { OcpiUnknownTokenException } from '../../../../shared/exceptions/ocpi.exceptions'
+import { OcpiAuthGuard } from '@/ocpi/common/guards/ocpi-auth.guard'
 
 describe('TokensCpoController', () => {
   let controller: TokensCpoController
@@ -45,7 +46,7 @@ describe('TokensCpoController', () => {
       getToken: vi.fn(),
       createOrUpdateToken: vi.fn(),
       updateToken: vi.fn(),
-    }
+    } as any
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TokensCpoController],
@@ -55,7 +56,10 @@ describe('TokensCpoController', () => {
           useValue: mockService,
         },
       ],
-    }).compile()
+    })
+      .overrideGuard(OcpiAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile()
 
     controller = module.get<TokensCpoController>(TokensCpoController)
     mockTokenService = module.get(TokenService)
@@ -193,7 +197,7 @@ describe('TokensCpoController', () => {
     })
 
     it('should require last_updated field for PATCH', async () => {
-      const patchDataWithoutTimestamp = { valid: false }
+      const patchDataWithoutTimestamp = { valid: false } as any
 
       await expect(
         controller.patchToken(

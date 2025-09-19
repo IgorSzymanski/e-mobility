@@ -18,7 +18,10 @@ import type {
   AuthorizationResponseDto,
   TokenListQuery,
 } from '../dto/token.dto'
-import { TokenListQuerySchema, AuthorizeRequestDtoSchema } from '../dto/token.dto'
+import {
+  TokenListQuerySchema,
+  AuthorizeRequestDtoSchema,
+} from '../dto/token.dto'
 import type { OcpiResponse } from '@/ocpi/v2_2_1/common/ocpi-envelope'
 import { createOcpiSuccessResponse } from '@/ocpi/v2_2_1/common/ocpi-envelope'
 import { OcpiEndpoint } from '@/ocpi/common/decorators/ocpi-endpoint.decorator'
@@ -90,9 +93,36 @@ export class TokensEmspController {
     const authInfo = await this.#svc.authorizeToken(tokenUid, type, locationRef)
 
     // Convert AuthorizationInfo to response DTO
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const tokenData = authInfo.token as any
     const response: AuthorizationResponseDto = {
       allowed: authInfo.allowed,
-      token: authInfo.token,
+      token: {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        country_code: tokenData.id.countryCode,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        party_id: tokenData.id.partyId,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        uid: tokenData.id.uid,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        type: tokenData.type,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        contract_id: tokenData.contractId,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        visual_number: tokenData.visualNumber,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        issuer: tokenData.issuer,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        group_id: tokenData.groupId,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        valid: tokenData.valid,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        whitelist: tokenData.whitelist,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        language: tokenData.language,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        last_updated: tokenData.lastUpdated.toISOString(),
+      },
       location: authInfo.location
         ? {
             location_id: authInfo.location.locationId,

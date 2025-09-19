@@ -12,6 +12,7 @@ import {
 } from '../../../../domain/tokens/enums/token-enums'
 import { AuthorizeRequestDto, TokenListQuery } from '../dto/token.dto'
 import { OcpiUnknownTokenException } from '../../../../shared/exceptions/ocpi.exceptions'
+import { OcpiAuthGuard } from '@/ocpi/common/guards/ocpi-auth.guard'
 
 describe('TokensEmspController', () => {
   let controller: TokensEmspController
@@ -49,7 +50,7 @@ describe('TokensEmspController', () => {
     const mockService = {
       getTokens: vi.fn(),
       authorizeToken: vi.fn(),
-    }
+    } as any
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TokensEmspController],
@@ -59,7 +60,10 @@ describe('TokensEmspController', () => {
           useValue: mockService,
         },
       ],
-    }).compile()
+    })
+      .overrideGuard(OcpiAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile()
 
     controller = module.get<TokensEmspController>(TokensEmspController)
     mockTokenService = module.get(TokenService)
