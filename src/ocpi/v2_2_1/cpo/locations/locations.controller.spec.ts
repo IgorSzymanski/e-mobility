@@ -1,34 +1,24 @@
 /* eslint-disable @typescript-eslint/require-await */
 import { Test, TestingModule } from '@nestjs/testing'
-import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { LocationsController } from './locations.controller'
 import { LocationService } from '../../common/locations/services/location.service'
 import type { LocationRepository } from '../../common/locations/repositories/location.repository'
-import { Location } from '@/domain/locations/location.aggregate'
-import { LocationId } from '@/domain/locations/value-objects/location-id'
-import { GeoLocation } from '@/domain/locations/value-objects/geo-location'
+import type { OcpiParty } from '@/ocpi/common/services/ocpi-token-validation.service'
+import { createOcpiSuccessResponse } from '../../common/ocpi-envelope'
 
 describe('CPO LocationsController', () => {
   let controller: LocationsController
   let locationService: LocationService
   let mockLocationRepository: LocationRepository
 
-  const createTestLocation = (): Location => {
-    const locationId = new LocationId('NL', 'ABC', 'LOC001')
-    const coordinates = new GeoLocation('52.370216', '4.895168')
-
-    return new Location(
-      locationId,
-      true,
-      'Test Street 1',
-      'Amsterdam',
-      'NLD',
-      coordinates,
-      'Europe/Amsterdam',
-      new Date('2023-01-01T00:00:00.000Z'),
-      'Test Location',
-      '1234AB',
-    )
+  const mockOcpiParty: OcpiParty = {
+    countryCode: 'NL',
+    partyId: 'ABC',
+    role: 'CPO',
+    businessDetails: {
+      name: 'Test CPO',
+      website: 'https://test-cpo.com',
+    },
   }
 
   beforeEach(async () => {
@@ -49,7 +39,19 @@ describe('CPO LocationsController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LocationsController],
       providers: [
-        LocationService,
+        {
+          provide: LocationService,
+          useValue: {
+            findLocations: vi.fn(),
+            findLocationById: vi.fn(),
+            findEvse: vi.fn(),
+            findConnector: vi.fn(),
+            saveLocation: vi.fn(),
+            updateEvse: vi.fn(),
+            updateConnector: vi.fn(),
+            locationExists: vi.fn(),
+          },
+        },
         {
           provide: 'LocationRepository',
           useValue: mockLocationRepository,
@@ -63,16 +65,37 @@ describe('CPO LocationsController', () => {
 
   describe('getLocations', () => {
     it('should return paginated locations list', async () => {
-      const testLocation = createTestLocation()
-      const mockResult = {
-        locations: [testLocation],
-        totalCount: 1,
-        hasMore: false,
-      }
+      const mockResponse = createOcpiSuccessResponse([
+        {
+          id: 'LOC001',
+          country_code: 'NL',
+          party_id: 'ABC',
+          publish: true,
+          name: 'Test Location',
+          address: 'Test Street 1',
+          city: 'Amsterdam',
+          postal_code: '1234AB',
+          country: 'NLD',
+          coordinates: {
+            latitude: '52.370216',
+            longitude: '4.895168',
+          },
+          related_locations: [],
+          evses: [],
+          directions: [],
+          facilities: [],
+          time_zone: 'Europe/Amsterdam',
+          opening_times: undefined,
+          charging_when_closed: undefined,
+          images: [],
+          energy_mix: undefined,
+          last_updated: '2023-01-01T00:00:00.000Z',
+          publish_allowed_to: [],
+        },
+      ])
 
-      vi.mocked(mockLocationRepository.findLocations).mockResolvedValue(
-        mockResult,
-      )
+      // Mock the locationService.findLocations method instead
+      vi.mocked(locationService.findLocations).mockResolvedValue(mockResponse)
 
       const query = {
         date_from: '2023-01-01T00:00:00Z',
@@ -81,60 +104,73 @@ describe('CPO LocationsController', () => {
         limit: 10,
       }
 
-      const result = await controller.getLocations(query)
+      const result = await controller.getLocations(query, mockOcpiParty)
 
       expect(result.status_code).toBe(1000)
       expect(result.data).toHaveLength(1)
-      expect(result.data[0].id).toBe('LOC001')
-      expect(result.data[0].country_code).toBe('NL')
-      expect(result.data[0].party_id).toBe('ABC')
+      expect(result.data![0].id).toBe('LOC001')
+      expect(result.data![0].country_code).toBe('NL')
+      expect(result.data![0].party_id).toBe('ABC')
 
-      expect(mockLocationRepository.findLocations).toHaveBeenCalledWith(
-        {
-          dateFrom: new Date('2023-01-01T00:00:00Z'),
-          dateTo: new Date('2023-01-02T00:00:00Z'),
-        },
-        { offset: 0, limit: 10 },
+      expect(locationService.findLocations).toHaveBeenCalledWith(
+        query,
+        mockOcpiParty.countryCode,
+        mockOcpiParty.partyId,
       )
     })
 
     it('should handle pagination correctly', async () => {
-      const testLocation = createTestLocation()
-      const mockResult = {
-        locations: [testLocation],
-        totalCount: 25,
-        hasMore: true,
-      }
+      const mockResponse = createOcpiSuccessResponse([
+        {
+          id: 'LOC001',
+          country_code: 'NL',
+          party_id: 'ABC',
+          publish: true,
+          name: 'Test Location',
+          address: 'Test Street 1',
+          city: 'Amsterdam',
+          postal_code: '1234AB',
+          country: 'NLD',
+          coordinates: {
+            latitude: '52.370216',
+            longitude: '4.895168',
+          },
+          related_locations: [],
+          evses: [],
+          directions: [],
+          facilities: [],
+          time_zone: 'Europe/Amsterdam',
+          opening_times: undefined,
+          charging_when_closed: undefined,
+          images: [],
+          energy_mix: undefined,
+          last_updated: '2023-01-01T00:00:00.000Z',
+          publish_allowed_to: [],
+        },
+      ])
 
-      vi.mocked(mockLocationRepository.findLocations).mockResolvedValue(
-        mockResult,
-      )
+      vi.mocked(locationService.findLocations).mockResolvedValue(mockResponse)
 
       const query = { offset: 10, limit: 10 }
-      const result = await controller.getLocations(query)
+      const result = await controller.getLocations(query, mockOcpiParty)
 
       expect(result.status_code).toBe(1000)
       expect(result.data).toHaveLength(1)
 
-      expect(mockLocationRepository.findLocations).toHaveBeenCalledWith(
-        {},
-        { offset: 10, limit: 10 },
+      expect(locationService.findLocations).toHaveBeenCalledWith(
+        query,
+        mockOcpiParty.countryCode,
+        mockOcpiParty.partyId,
       )
     })
 
     it('should handle empty results', async () => {
-      const mockResult = {
-        locations: [],
-        totalCount: 0,
-        hasMore: false,
-      }
+      const mockResponse = createOcpiSuccessResponse([])
 
-      vi.mocked(mockLocationRepository.findLocations).mockResolvedValue(
-        mockResult,
-      )
+      vi.mocked(locationService.findLocations).mockResolvedValue(mockResponse)
 
       const query = { offset: 0 }
-      const result = await controller.getLocations(query)
+      const result = await controller.getLocations(query, mockOcpiParty)
 
       expect(result.status_code).toBe(1000)
       expect(result.data).toHaveLength(0)
@@ -147,36 +183,66 @@ describe('CPO LocationsController', () => {
         limit: 2000, // Exceeds max
       }
 
-      await expect(controller.getLocations(invalidQuery)).rejects.toThrow()
+      await expect(
+        controller.getLocations(invalidQuery, mockOcpiParty),
+      ).rejects.toThrow()
     })
   })
 
   describe('getLocation', () => {
     it('should return specific location by ID', async () => {
-      const testLocation = createTestLocation()
-      vi.mocked(mockLocationRepository.findLocationById).mockResolvedValue(
-        testLocation,
+      const mockResponse = createOcpiSuccessResponse({
+        id: 'LOC001',
+        country_code: 'NL',
+        party_id: 'ABC',
+        publish: true,
+        name: 'Test Location',
+        address: 'Test Street 1',
+        city: 'Amsterdam',
+        postal_code: '1234AB',
+        country: 'NLD',
+        coordinates: {
+          latitude: '52.370216',
+          longitude: '4.895168',
+        },
+        related_locations: [],
+        evses: [],
+        directions: [],
+        facilities: [],
+        time_zone: 'Europe/Amsterdam',
+        opening_times: undefined,
+        charging_when_closed: undefined,
+        images: [],
+        energy_mix: undefined,
+        last_updated: '2023-01-01T00:00:00.000Z',
+        publish_allowed_to: [],
+      })
+
+      vi.mocked(locationService.findLocationById).mockResolvedValue(
+        mockResponse,
       )
 
       const params = { location_id: 'LOC001' }
-      const result = await controller.getLocation(params)
+      const result = await controller.getLocation(params, mockOcpiParty)
 
       expect(result.status_code).toBe(1000)
-      expect(result.data.id).toBe('LOC001')
-      expect(result.data.name).toBe('Test Location')
+      expect(result.data!.id).toBe('LOC001')
+      expect(result.data!.name).toBe('Test Location')
 
-      expect(mockLocationRepository.findLocationById).toHaveBeenCalledWith(
-        'NL', // Should get from context/auth
-        'ABC', // Should get from context/auth
-        'LOC001',
+      expect(locationService.findLocationById).toHaveBeenCalledWith(
+        params,
+        mockOcpiParty.countryCode,
+        mockOcpiParty.partyId,
       )
     })
 
     it('should return 2001 when location not found', async () => {
-      vi.mocked(mockLocationRepository.findLocationById).mockResolvedValue(null)
+      vi.mocked(locationService.findLocationById).mockRejectedValue(
+        new Error('Location not found'),
+      )
 
       const params = { location_id: 'NONEXISTENT' }
-      const result = await controller.getLocation(params)
+      const result = await controller.getLocation(params, mockOcpiParty)
 
       expect(result.status_code).toBe(2001)
       expect(result.status_message).toContain('Unknown location')
@@ -185,51 +251,96 @@ describe('CPO LocationsController', () => {
     it('should validate location_id parameter', async () => {
       const invalidParams = { location_id: '' }
 
-      await expect(controller.getLocation(invalidParams)).rejects.toThrow()
+      await expect(
+        controller.getLocation(invalidParams, mockOcpiParty),
+      ).rejects.toThrow()
     })
   })
 
   describe('getEvse', () => {
     it('should return specific EVSE from location', async () => {
-      // This would require implementing EVSE finding logic
-      const params = {
-        location_id: 'LOC001',
-        evse_uid: 'EVSE001',
-      }
+      // Mock the locationService.findEvse method
+      const mockEvseResponse = createOcpiSuccessResponse({
+        uid: 'EVSE001',
+        evse_id: 'NL*ABC*EVSE001',
+        status: 'AVAILABLE' as const,
+        capabilities: ['RFID_READER' as const, 'RESERVABLE' as const],
+        connectors: [
+          {
+            id: '1',
+            standard: 'IEC_62196_T2' as const,
+            format: 'SOCKET' as const,
+            power_type: 'AC_3_PHASE' as const,
+            max_voltage: 400,
+            max_amperage: 32,
+            max_electric_power: 22000,
+            tariff_ids: ['TARIFF_001'],
+            last_updated: '2023-01-01T00:00:00.000Z',
+          },
+        ],
+        coordinates: {
+          latitude: '52.370216',
+          longitude: '4.895168',
+        },
+        last_updated: '2023-01-01T00:00:00.000Z',
+      })
 
-      // For now, we'll skip this as it requires EVSE domain models
-      expect(controller.getEvse).toBeDefined()
+      vi.mocked(locationService.findEvse).mockResolvedValue(mockEvseResponse)
+
+      const params = { location_id: 'LOC001', evse_uid: 'EVSE001' }
+      const result = await controller.getEvse(params, mockOcpiParty)
+
+      expect(result.status_code).toBe(1000)
+      expect(locationService.findEvse).toHaveBeenCalledWith(
+        params,
+        mockOcpiParty.countryCode,
+        mockOcpiParty.partyId,
+      )
     })
   })
 
   describe('getConnector', () => {
     it('should return specific connector from EVSE', async () => {
-      // This would require implementing Connector finding logic
+      // Mock the locationService.findConnector method
+      const mockConnectorResponse = createOcpiSuccessResponse({
+        id: '1',
+        standard: 'IEC_62196_T2' as const,
+        format: 'SOCKET' as const,
+        power_type: 'AC_3_PHASE' as const,
+        max_voltage: 400,
+        max_amperage: 32,
+        max_electric_power: 22000,
+        tariff_ids: ['TARIFF_001'],
+        last_updated: '2023-01-01T00:00:00.000Z',
+      })
+
+      vi.mocked(locationService.findConnector).mockResolvedValue(
+        mockConnectorResponse,
+      )
+
       const params = {
         location_id: 'LOC001',
         evse_uid: 'EVSE001',
         connector_id: '1',
       }
+      const result = await controller.getConnector(params, mockOcpiParty)
 
-      // For now, we'll skip this as it requires Connector domain models
-      expect(controller.getConnector).toBeDefined()
+      expect(result.status_code).toBe(1000)
+      expect(locationService.findConnector).toHaveBeenCalledWith(
+        params,
+        mockOcpiParty.countryCode,
+        mockOcpiParty.partyId,
+      )
     })
   })
 
   describe('OCPI Response Format', () => {
     it('should return proper OCPI envelope structure', async () => {
-      const testLocation = createTestLocation()
-      const mockResult = {
-        locations: [testLocation],
-        totalCount: 1,
-        hasMore: false,
-      }
+      const mockResponse = createOcpiSuccessResponse([])
 
-      vi.mocked(mockLocationRepository.findLocations).mockResolvedValue(
-        mockResult,
-      )
+      vi.mocked(locationService.findLocations).mockResolvedValue(mockResponse)
 
-      const result = await controller.getLocations({ offset: 0 })
+      const result = await controller.getLocations({ offset: 0 }, mockOcpiParty)
 
       expect(result).toHaveProperty('status_code')
       expect(result).toHaveProperty('status_message')
