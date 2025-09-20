@@ -1,17 +1,28 @@
 /* eslint-disable @typescript-eslint/require-await */
 import { Test, TestingModule } from '@nestjs/testing'
-import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { LocationsController } from './locations.controller'
 import { LocationService } from '../../common/locations/services/location.service'
 import type { LocationRepository } from '../../common/locations/repositories/location.repository'
 import { Location } from '@/domain/locations/location.aggregate'
 import { LocationId } from '@/domain/locations/value-objects/location-id'
 import { GeoLocation } from '@/domain/locations/value-objects/geo-location'
+import type { OcpiParty } from '@/ocpi/common/services/ocpi-token-validation.service'
+import { createOcpiSuccessResponse } from '../../common/ocpi-envelope'
 
 describe('EMP LocationsController', () => {
   let controller: LocationsController
   let locationService: LocationService
   let mockLocationRepository: LocationRepository
+
+  const mockOcpiParty: OcpiParty = {
+    countryCode: 'DE',
+    partyId: 'EXP',
+    role: 'EMSP',
+    businessDetails: {
+      name: 'Test EMSP',
+      website: 'https://test-emsp.com',
+    },
+  }
 
   const createTestLocation = (): Location => {
     const locationId = new LocationId('DE', 'EXP', 'LOC001')
@@ -49,7 +60,15 @@ describe('EMP LocationsController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LocationsController],
       providers: [
-        LocationService,
+        {
+          provide: LocationService,
+          useValue: {
+            locationExists: vi.fn(),
+            saveLocation: vi.fn(),
+            updateEvse: vi.fn(),
+            updateConnector: vi.fn(),
+          },
+        },
         {
           provide: 'LocationRepository',
           useValue: mockLocationRepository,
@@ -96,18 +115,47 @@ describe('EMP LocationsController', () => {
         publish_allowed_to: [],
       }
 
-      vi.mocked(mockLocationRepository.saveLocation).mockResolvedValue(
-        testLocation,
-      )
+      const mockResponse = createOcpiSuccessResponse({
+        country_code: 'DE',
+        party_id: 'EXP',
+        id: 'LOC001',
+        publish: true,
+        name: 'Berlin Charging Hub',
+        address: 'Alexanderplatz 1',
+        city: 'Berlin',
+        postal_code: '10178',
+        country: 'DEU',
+        coordinates: {
+          latitude: '52.520008',
+          longitude: '13.404954',
+        },
+        related_locations: [],
+        evses: [],
+        directions: [],
+        facilities: [],
+        time_zone: 'Europe/Berlin',
+        opening_times: undefined,
+        charging_when_closed: undefined,
+        images: [],
+        energy_mix: undefined,
+        last_updated: '2023-01-01T00:00:00.000Z',
+        publish_allowed_to: [],
+      })
+
+      vi.mocked(locationService.saveLocation).mockResolvedValue(testLocation)
 
       const params = { location_id: 'LOC001' }
-      const result = await controller.putLocation(params, locationDto)
+      const result = await controller.putLocation(
+        params,
+        locationDto,
+        mockOcpiParty,
+      )
 
       expect(result.status_code).toBe(1000)
-      expect(result.data.id).toBe('LOC001')
-      expect(result.data.name).toBe('Berlin Charging Hub')
+      expect(result.data!.id).toBe('LOC001')
+      expect(result.data!.name).toBe('Berlin Charging Hub')
 
-      expect(mockLocationRepository.saveLocation).toHaveBeenCalledWith(
+      expect(locationService.saveLocation).toHaveBeenCalledWith(
         expect.any(Object), // Domain location object
       )
     })
@@ -159,23 +207,25 @@ describe('EMP LocationsController', () => {
         '10178',
       )
 
-      vi.mocked(mockLocationRepository.locationExists).mockResolvedValue(true)
-      vi.mocked(mockLocationRepository.saveLocation).mockResolvedValue(
-        updatedLocation,
-      )
+      vi.mocked(locationService.locationExists).mockResolvedValue(true)
+      vi.mocked(locationService.saveLocation).mockResolvedValue(updatedLocation)
 
       const params = { location_id: 'LOC001' }
-      const result = await controller.putLocation(params, locationDto)
+      const result = await controller.putLocation(
+        params,
+        locationDto,
+        mockOcpiParty,
+      )
 
       expect(result.status_code).toBe(1000)
-      expect(result.data.name).toBe('Updated Berlin Charging Hub')
+      expect(result.data!.name).toBe('Updated Berlin Charging Hub')
 
-      expect(mockLocationRepository.locationExists).toHaveBeenCalledWith(
+      expect(locationService.locationExists).toHaveBeenCalledWith(
         'DE',
         'EXP',
         'LOC001',
       )
-      expect(mockLocationRepository.saveLocation).toHaveBeenCalled()
+      expect(locationService.saveLocation).toHaveBeenCalled()
     })
 
     it('should validate location data', async () => {
@@ -189,7 +239,11 @@ describe('EMP LocationsController', () => {
       const params = { location_id: 'LOC001' }
 
       await expect(
-        controller.putLocation(params, invalidLocationDto as any),
+        controller.putLocation(
+          params,
+          invalidLocationDto as any,
+          mockOcpiParty,
+        ),
       ).rejects.toThrow()
     })
 
@@ -215,7 +269,7 @@ describe('EMP LocationsController', () => {
       const params = { location_id: 'LOC001' }
 
       await expect(
-        controller.putLocation(params, locationDto as any),
+        controller.putLocation(params, locationDto as any, mockOcpiParty),
       ).rejects.toThrow('Location ID mismatch')
     })
   })
@@ -240,18 +294,20 @@ describe('EMP LocationsController', () => {
         name: 'Partially Updated Location',
       }
 
-      vi.mocked(mockLocationRepository.locationExists).mockResolvedValue(true)
-      vi.mocked(mockLocationRepository.saveLocation).mockResolvedValue(
-        updatedLocation,
-      )
+      vi.mocked(locationService.locationExists).mockResolvedValue(true)
+      vi.mocked(locationService.saveLocation).mockResolvedValue(updatedLocation)
 
       const params = { location_id: 'LOC001' }
-      const result = await controller.patchLocation(params, partialUpdate)
+      const result = await controller.patchLocation(
+        params,
+        partialUpdate,
+        mockOcpiParty,
+      )
 
       expect(result.status_code).toBe(1000)
-      expect(result.data.name).toBe('Partially Updated Location')
+      expect(result.data!.name).toBe('Partially Updated Location')
 
-      expect(mockLocationRepository.locationExists).toHaveBeenCalledWith(
+      expect(locationService.locationExists).toHaveBeenCalledWith(
         'DE',
         'EXP',
         'LOC001',
@@ -259,12 +315,16 @@ describe('EMP LocationsController', () => {
     })
 
     it('should return 2001 when location not found for PATCH', async () => {
-      vi.mocked(mockLocationRepository.locationExists).mockResolvedValue(false)
+      vi.mocked(locationService.locationExists).mockResolvedValue(false)
 
       const partialUpdate = { name: 'Updated Name' }
       const params = { location_id: 'NONEXISTENT' }
 
-      const result = await controller.patchLocation(params, partialUpdate)
+      const result = await controller.patchLocation(
+        params,
+        partialUpdate,
+        mockOcpiParty,
+      )
 
       expect(result.status_code).toBe(2001)
       expect(result.status_message).toContain('Unknown location')
@@ -277,10 +337,22 @@ describe('EMP LocationsController', () => {
       const evseData = {
         uid: 'EVSE001',
         evse_id: 'DE*EXP*E001',
-        status: 'AVAILABLE',
+        status: 'AVAILABLE' as const,
         status_schedule: [],
-        capabilities: [],
-        connectors: [],
+        capabilities: ['RFID_READER' as const],
+        connectors: [
+          {
+            id: '1',
+            standard: 'IEC_62196_T2' as const,
+            format: 'SOCKET' as const,
+            power_type: 'AC_3_PHASE' as const,
+            max_voltage: 400,
+            max_amperage: 32,
+            max_electric_power: 22000,
+            tariff_ids: ['TARIFF_001'],
+            last_updated: '2023-01-01T00:00:00.000Z',
+          },
+        ],
         floor_level: undefined,
         coordinates: undefined,
         physical_reference: undefined,
@@ -290,17 +362,15 @@ describe('EMP LocationsController', () => {
         last_updated: '2023-01-01T00:00:00.000Z',
       }
 
-      vi.mocked(mockLocationRepository.locationExists).mockResolvedValue(true)
-      vi.mocked(mockLocationRepository.updateEvse).mockResolvedValue(
-        testLocation,
-      )
+      vi.mocked(locationService.locationExists).mockResolvedValue(true)
+      vi.mocked(locationService.updateEvse).mockResolvedValue(testLocation)
 
       const params = { location_id: 'LOC001', evse_uid: 'EVSE001' }
-      const result = await controller.putEvse(params, evseData)
+      const result = await controller.putEvse(params, evseData, mockOcpiParty)
 
       expect(result.status_code).toBe(1000)
 
-      expect(mockLocationRepository.updateEvse).toHaveBeenCalledWith(
+      expect(locationService.updateEvse).toHaveBeenCalledWith(
         'DE',
         'EXP',
         'LOC001',
@@ -309,17 +379,30 @@ describe('EMP LocationsController', () => {
     })
 
     it('should return 2001 when location not found for EVSE update', async () => {
-      vi.mocked(mockLocationRepository.locationExists).mockResolvedValue(false)
+      vi.mocked(locationService.locationExists).mockResolvedValue(false)
 
       const evseData = {
         uid: 'EVSE001',
         evse_id: 'DE*EXP*E001',
-        status: 'AVAILABLE',
+        status: 'AVAILABLE' as const,
+        capabilities: ['RFID_READER' as const],
+        connectors: [
+          {
+            id: '1',
+            standard: 'IEC_62196_T2' as const,
+            format: 'SOCKET' as const,
+            power_type: 'AC_3_PHASE' as const,
+            max_voltage: 400,
+            max_amperage: 32,
+            tariff_ids: ['TARIFF_001'],
+            last_updated: '2023-01-01T00:00:00.000Z',
+          },
+        ],
         last_updated: '2023-01-01T00:00:00.000Z',
       }
 
       const params = { location_id: 'NONEXISTENT', evse_uid: 'EVSE001' }
-      const result = await controller.putEvse(params, evseData)
+      const result = await controller.putEvse(params, evseData, mockOcpiParty)
 
       expect(result.status_code).toBe(2001)
       expect(result.status_message).toContain('Unknown location')
@@ -331,32 +414,34 @@ describe('EMP LocationsController', () => {
       const testLocation = createTestLocation()
       const connectorData = {
         id: '1',
-        standard: 'IEC_62196_T2',
-        format: 'SOCKET',
-        power_type: 'AC_3_PHASE',
+        standard: 'IEC_62196_T2' as const,
+        format: 'SOCKET' as const,
+        power_type: 'AC_3_PHASE' as const,
         max_voltage: 400,
         max_amperage: 32,
         max_electric_power: 22000,
-        tariff_ids: [],
+        tariff_ids: ['TARIFF_001'],
         terms_and_conditions: undefined,
         last_updated: '2023-01-01T00:00:00.000Z',
       }
 
-      vi.mocked(mockLocationRepository.locationExists).mockResolvedValue(true)
-      vi.mocked(mockLocationRepository.updateConnector).mockResolvedValue(
-        testLocation,
-      )
+      vi.mocked(locationService.locationExists).mockResolvedValue(true)
+      vi.mocked(locationService.updateConnector).mockResolvedValue(testLocation)
 
       const params = {
         location_id: 'LOC001',
         evse_uid: 'EVSE001',
         connector_id: '1',
       }
-      const result = await controller.putConnector(params, connectorData)
+      const result = await controller.putConnector(
+        params,
+        connectorData,
+        mockOcpiParty,
+      )
 
       expect(result.status_code).toBe(1000)
 
-      expect(mockLocationRepository.updateConnector).toHaveBeenCalledWith(
+      expect(locationService.updateConnector).toHaveBeenCalledWith(
         'DE',
         'EXP',
         'LOC001',
@@ -396,12 +481,14 @@ describe('EMP LocationsController', () => {
         last_updated: '2023-01-01T00:00:00.000Z',
       }
 
-      vi.mocked(mockLocationRepository.saveLocation).mockResolvedValue(
-        testLocation,
-      )
+      vi.mocked(locationService.saveLocation).mockResolvedValue(testLocation)
 
       const params = { location_id: 'LOC001' }
-      const result = await controller.putLocation(params, locationDto as any)
+      const result = await controller.putLocation(
+        params,
+        locationDto as any,
+        mockOcpiParty,
+      )
 
       expect(result).toHaveProperty('status_code')
       expect(result).toHaveProperty('status_message')
