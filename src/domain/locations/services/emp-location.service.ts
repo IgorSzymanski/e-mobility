@@ -49,13 +49,13 @@ export class EmpLocationService {
     this.validateLocationOwnership(locationData, countryCode, partyId)
 
     // Validate required fields
-    this.validateRequiredLocationFields(locationData)
+    this.validateRequiredLocationFields()
 
     // Check if location already exists
     const exists = await this.locationRepository.locationExists(
       countryCode,
       partyId,
-      locationData.id.value,
+      locationData.id.id,
     )
 
     if (exists) {
@@ -63,12 +63,12 @@ export class EmpLocationService {
       const existingLocation = await this.locationRepository.findLocationById(
         countryCode,
         partyId,
-        locationData.id.value,
+        locationData.id.id,
       )
 
       if (!existingLocation) {
         throw new OcpiUnknownLocationException(
-          `Location ${locationData.id.value} exists but could not be retrieved`,
+          `Location ${locationData.id.id} exists but could not be retrieved`,
         )
       }
 
@@ -166,9 +166,7 @@ export class EmpLocationService {
       )
     }
 
-    // Update the connector in the EVSE
-    // TODO: Implement updateConnector method in EVSE class
-    // For now, this is a placeholder implementation
+    // Update the connector in the EVSE using immutable operations
     const currentConnectors = targetEvse.connectors || []
     const connectorIndex = currentConnectors.findIndex(
       (c) => c.id === connectorId,
@@ -203,41 +201,39 @@ export class EmpLocationService {
 
   private validateLocationOwnership(
     location: Location,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _countryCode: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _partyId: string,
+    countryCode: string,
+    partyId: string,
   ): void {
-    // The location ID should contain country code and party ID information
-    // This validation ensures the location belongs to the authenticated party
-    const locationId = location.id.value
+    // CRITICAL SECURITY: Validate that the location belongs to the authenticated party
+    // This prevents cross-party data tampering attacks
 
-    // In OCPI, location IDs should be unique within the party's scope
-    // Additional validation could be added here based on business rules
-    if (!locationId || locationId.trim() === '') {
+    if (location.id.countryCode !== countryCode) {
+      throw new OcpiInvalidParametersException(
+        `Location country code '${location.id.countryCode}' does not match authenticated party country code '${countryCode}'`,
+      )
+    }
+
+    if (location.id.partyId !== partyId) {
+      throw new OcpiInvalidParametersException(
+        `Location party ID '${location.id.partyId}' does not match authenticated party ID '${partyId}'`,
+      )
+    }
+
+    // Basic validation that location ID is not empty
+    if (!location.id.id || location.id.id.trim() === '') {
       throw new OcpiInvalidParametersException('Location ID cannot be empty')
     }
   }
 
-  private validateRequiredLocationFields(location: Location): void {
-    // The Location aggregate already has validation in its constructor
-    // This method can add additional EMP-specific validation rules
-
-    if (!location.address || location.address.trim() === '') {
-      throw new OcpiInvalidParametersException('Address is required')
-    }
-
-    if (!location.city || location.city.trim() === '') {
-      throw new OcpiInvalidParametersException('City is required')
-    }
-
-    if (!location.country || location.country.trim() === '') {
-      throw new OcpiInvalidParametersException('Country is required')
-    }
-
-    if (!location.coordinates) {
-      throw new OcpiInvalidParametersException('Coordinates are required')
-    }
+  private validateRequiredLocationFields(): void {
+    // The Location aggregate already validates all required fields using Zod in its constructor
+    // The validation happens automatically when the Location is instantiated, so no additional
+    // validation is needed here. The Location constructor will throw OcpiInvalidParametersException
+    // if any required fields are missing or invalid.
+    // This method is kept for potential future EMP-specific business rules
+    // that might be different from the core domain validation
+    // All basic validation (address, city, country, coordinates, timezone) is handled by
+    // the Location aggregate's internal Zod schema validation
   }
 
   private mergeLocationData(

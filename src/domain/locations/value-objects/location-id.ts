@@ -21,19 +21,6 @@ export class LocationId {
     this.validate()
   }
 
-  static fromString(locationIdString: string): LocationId {
-    const parts = locationIdString.split('*')
-
-    if (parts.length !== 3) {
-      throw new OcpiInvalidParametersException(
-        'Location ID string must be in format: XX*XXX*XXXXXXXX',
-      )
-    }
-
-    const [countryCode, partyId, id] = parts
-    return new LocationId(countryCode, partyId, id)
-  }
-
   get countryCode(): string {
     return this._countryCode
   }
@@ -44,10 +31,6 @@ export class LocationId {
 
   get id(): string {
     return this._id
-  }
-
-  get value(): string {
-    return `${this._countryCode}*${this._partyId}*${this._id}`
   }
 
   private validate(): void {
@@ -64,6 +47,10 @@ export class LocationId {
   }
 
   equals(other: LocationId): boolean {
-    return this.value === other.value
+    return (
+      this._countryCode === other._countryCode &&
+      this._partyId === other._partyId &&
+      this._id === other._id
+    )
   }
 }
