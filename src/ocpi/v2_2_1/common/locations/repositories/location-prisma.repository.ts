@@ -1,4 +1,9 @@
-import type { PrismaClient, OcpiLocation, Prisma, OcpiFacility } from '@prisma/client'
+import type {
+  PrismaClient,
+  OcpiLocation,
+  Prisma,
+  OcpiFacility,
+} from '@prisma/client'
 import type {
   LocationRepository,
   LocationFilter,
@@ -448,12 +453,12 @@ export class LocationPrismaRepository implements LocationRepository {
       operator,
       suboperator,
       owner,
-      prismaLocation.facilities,
-      prismaLocation.openingTimes, // Would need proper mapping
-      prismaLocation.chargingWhenClosed,
+      undefined, // Would need proper mapping for facilities
+      undefined, // Would need proper mapping for opening times
+      prismaLocation.chargingWhenClosed ?? undefined,
       images,
-      prismaLocation.energyMix, // Would need proper mapping
-      prismaLocation.publishAllowedTo, // Would need proper mapping
+      undefined, // Would need proper mapping for energy mix
+      undefined, // Would need proper mapping for publish allowed to
     )
   }
 
