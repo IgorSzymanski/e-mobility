@@ -1,4 +1,4 @@
-import type { PrismaClient, OcpiLocation, Prisma } from '@prisma/client'
+import type { PrismaClient, OcpiLocation, Prisma, OcpiFacility } from '@prisma/client'
 import type {
   LocationRepository,
   LocationFilter,
@@ -20,7 +20,34 @@ import { OcpiContextService } from '@/ocpi/common/services/ocpi-context.service'
 import { Logger } from '@nestjs/common'
 import { z } from 'zod'
 
+// Type alias for Prisma JSON values
+type PrismaJsonValue = Prisma.InputJsonValue
+
 // Zod schemas for JSON validation
+const FacilitySchema = z.enum([
+  'HOTEL',
+  'RESTAURANT',
+  'CAFE',
+  'MALL',
+  'SUPERMARKET',
+  'SPORT',
+  'RECREATION_AREA',
+  'NATURE',
+  'MUSEUM',
+  'BIKE_SHARING',
+  'BUS_STOP',
+  'TAXI_STAND',
+  'TRAM_STOP',
+  'METRO_STATION',
+  'TRAIN_STATION',
+  'AIRPORT',
+  'PARKING_LOT',
+  'CARPOOL_PARKING',
+  'FUEL_STATION',
+  'WIFI',
+])
+
+const FacilitiesArraySchema = z.array(FacilitySchema)
 
 const BusinessDetailsJsonSchema = z
   .object({
@@ -411,13 +438,13 @@ export class LocationPrismaRepository implements LocationRepository {
       coordinates,
       prismaLocation.timeZone,
       prismaLocation.lastUpdated,
-      prismaLocation.name,
-      prismaLocation.postalCode,
+      prismaLocation.name ?? undefined,
+      prismaLocation.postalCode ?? undefined,
       prismaLocation.state ?? undefined,
-      prismaLocation.relatedLocations, // Would need proper mapping
-      prismaLocation.parkingType,
+      undefined, // Would need proper mapping for related locations
+      prismaLocation.parkingType ?? undefined,
       undefined, // EVSEs - would need proper mapping from domain models
-      prismaLocation.directions, // Would need proper mapping
+      undefined, // Would need proper mapping for directions
       operator,
       suboperator,
       owner,
@@ -434,13 +461,33 @@ export class LocationPrismaRepository implements LocationRepository {
     location: Location,
   ): Prisma.OcpiLocationCreateInput {
     // Helper function to safely convert domain objects to Prisma JSON
-    const toPrismaJson = (value: unknown): any => {
+    const toPrismaJson = (value: unknown): PrismaJsonValue | undefined => {
       if (value === null || value === undefined) return undefined
       try {
-        return JSON.parse(JSON.stringify(value))
+        const serialized = JSON.stringify(value)
+        const parsed: unknown = JSON.parse(serialized)
+        // Type guard to ensure it's a valid Prisma JSON value
+        if (
+          typeof parsed === 'string' ||
+          typeof parsed === 'number' ||
+          typeof parsed === 'boolean' ||
+          parsed === null ||
+          Array.isArray(parsed) ||
+          (typeof parsed === 'object' && parsed !== null)
+        ) {
+          return parsed as PrismaJsonValue
+        }
+        return undefined
       } catch {
         return undefined
       }
+    }
+
+    // Helper function to safely convert facilities array
+    const toFacilitiesArray = (value: unknown): OcpiFacility[] => {
+      if (value === null || value === undefined) return []
+      const parsed = FacilitiesArraySchema.safeParse(value)
+      return parsed.success ? parsed.data : []
     }
 
     return {
@@ -465,9 +512,7 @@ export class LocationPrismaRepository implements LocationRepository {
       operator: toPrismaJson(location.operator),
       suboperator: toPrismaJson(location.suboperator),
       owner: toPrismaJson(location.owner),
-      facilities: location.facilities
-        ? toPrismaJson(location.facilities) || []
-        : [],
+      facilities: toFacilitiesArray(location.facilities),
       timeZone: location.timeZone,
       openingTimes: toPrismaJson(location.openingTimes),
       chargingWhenClosed: location.chargingWhenClosed,
