@@ -12,9 +12,41 @@ import { LocationId } from '@/domain/locations/value-objects/location-id'
 import { GeoLocation } from '@/domain/locations/value-objects/geo-location'
 import { Location as LocationDomain } from '@/domain/locations/location.aggregate'
 import { BusinessDetails } from '@/domain/locations/value-objects/business-details'
-import { Image } from '@/domain/locations/value-objects/image'
+import {
+  Image,
+  type ImageCategory,
+} from '@/domain/locations/value-objects/image'
 import { OcpiContextService } from '@/ocpi/common/services/ocpi-context.service'
 import { Logger } from '@nestjs/common'
+import { z } from 'zod'
+
+// Zod schemas for JSON validation
+
+const BusinessDetailsJsonSchema = z
+  .object({
+    name: z.string(),
+    website: z.string().optional(),
+    logo: z
+      .object({
+        url: z.string(),
+        category: z.string(),
+        type: z.string(),
+        thumbnail: z.string().optional(),
+        width: z.number().optional(),
+        height: z.number().optional(),
+      })
+      .optional(),
+  })
+  .optional()
+
+const ImageJsonSchema = z.object({
+  url: z.string(),
+  category: z.string(),
+  type: z.string(),
+  thumbnail: z.string().optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+})
 
 export class LocationPrismaRepository implements LocationRepository {
   private readonly logger = new Logger(LocationPrismaRepository.name)
@@ -381,7 +413,7 @@ export class LocationPrismaRepository implements LocationRepository {
       prismaLocation.lastUpdated,
       prismaLocation.name,
       prismaLocation.postalCode,
-      prismaLocation.state,
+      prismaLocation.state ?? undefined,
       prismaLocation.relatedLocations, // Would need proper mapping
       prismaLocation.parkingType,
       undefined, // EVSEs - would need proper mapping from domain models
@@ -401,34 +433,46 @@ export class LocationPrismaRepository implements LocationRepository {
   private mapDomainToPrisma(
     location: Location,
   ): Prisma.OcpiLocationCreateInput {
+    // Helper function to safely convert domain objects to Prisma JSON
+    const toPrismaJson = (value: unknown): any => {
+      if (value === null || value === undefined) return undefined
+      try {
+        return JSON.parse(JSON.stringify(value))
+      } catch {
+        return undefined
+      }
+    }
+
     return {
       countryCode: location.id.countryCode,
       partyId: location.id.partyId,
       locationId: location.id.id,
       publish: location.publish,
-      publishAllowedTo: location.publishAllowedTo as unknown,
+      publishAllowedTo: toPrismaJson(location.publishAllowedTo),
       name: location.name,
       address: location.address,
       city: location.city,
       postalCode: location.postalCode,
-      state: location.state,
+      state: location.state ?? undefined,
       country: location.country,
       coordinates: {
         latitude: location.coordinates.latitude,
         longitude: location.coordinates.longitude,
       },
-      relatedLocations: location.relatedLocations as unknown,
+      relatedLocations: toPrismaJson(location.relatedLocations),
       parkingType: location.parkingType,
-      directions: location.directions,
-      operator: location.operator as unknown,
-      suboperator: location.suboperator as unknown,
-      owner: location.owner as unknown,
-      facilities: location.facilities ? (location.facilities as unknown[]) : [],
+      directions: toPrismaJson(location.directions),
+      operator: toPrismaJson(location.operator),
+      suboperator: toPrismaJson(location.suboperator),
+      owner: toPrismaJson(location.owner),
+      facilities: location.facilities
+        ? toPrismaJson(location.facilities) || []
+        : [],
       timeZone: location.timeZone,
-      openingTimes: location.openingTimes as unknown,
+      openingTimes: toPrismaJson(location.openingTimes),
       chargingWhenClosed: location.chargingWhenClosed,
-      images: location.images as unknown,
-      energyMix: location.energyMix as unknown,
+      images: toPrismaJson(location.images),
+      energyMix: toPrismaJson(location.energyMix),
       lastUpdated: location.lastUpdated,
     }
   }
@@ -436,27 +480,15 @@ export class LocationPrismaRepository implements LocationRepository {
   private mapBusinessDetailsFromJson(
     json: unknown,
   ): BusinessDetails | undefined {
-    if (!json || typeof json !== 'object') return undefined
+    const parsed = BusinessDetailsJsonSchema.safeParse(json)
+    if (!parsed.success || !parsed.data?.name) return undefined
 
-    const businessDetails = json as {
-      name?: string
-      website?: string
-      logo?: {
-        url: string
-        category: string
-        type: string
-        thumbnail?: string
-        width?: number
-        height?: number
-      }
-    }
-
-    if (!businessDetails.name) return undefined
+    const businessDetails = parsed.data
 
     const logo = businessDetails.logo
       ? new Image(
           businessDetails.logo.url,
-          businessDetails.logo.category,
+          businessDetails.logo.category as ImageCategory,
           businessDetails.logo.type,
           businessDetails.logo.thumbnail,
           businessDetails.logo.width,
@@ -474,23 +506,22 @@ export class LocationPrismaRepository implements LocationRepository {
   private mapImagesFromJson(json: unknown): ReadonlyArray<Image> | undefined {
     if (!json || !Array.isArray(json)) return undefined
 
-    return json.map((img: unknown) => {
-      const imageData = img as {
-        url: string
-        category: string
-        type: string
-        thumbnail?: string
-        width?: number
-        height?: number
+    const images: Image[] = []
+    for (const img of json) {
+      const parsed = ImageJsonSchema.safeParse(img)
+      if (parsed.success) {
+        images.push(
+          new Image(
+            parsed.data.url,
+            parsed.data.category as ImageCategory,
+            parsed.data.type,
+            parsed.data.thumbnail,
+            parsed.data.width,
+            parsed.data.height,
+          ),
+        )
       }
-      return new Image(
-        imageData.url,
-        imageData.category,
-        imageData.type,
-        imageData.thumbnail,
-        imageData.width,
-        imageData.height,
-      )
-    })
+    }
+    return images.length > 0 ? images : undefined
   }
 }
