@@ -2,6 +2,9 @@ import { z } from 'zod'
 import type { Location } from '@/domain/locations/location.aggregate'
 import type { EVSE } from '@/domain/locations/entities/evse'
 import type { Connector } from '@/domain/locations/entities/connector'
+import { Location as LocationDomain } from '@/domain/locations/location.aggregate'
+import { LocationId } from '@/domain/locations/value-objects/location-id'
+import { GeoLocation } from '@/domain/locations/value-objects/geo-location'
 
 // OCPI 2.2.1 Capability enum
 export const CapabilitySchema = z.enum([
@@ -548,5 +551,45 @@ export class LocationMapper {
       terms_and_conditions: connector.termsAndConditions,
       last_updated: connector.lastUpdated.toISOString(),
     }
+  }
+
+  static toDomain(locationDto: LocationDto): Location {
+    const locationId = new LocationId(
+      locationDto.country_code,
+      locationDto.party_id,
+      locationDto.id,
+    )
+
+    const coordinates = new GeoLocation(
+      locationDto.coordinates.latitude,
+      locationDto.coordinates.longitude,
+    )
+
+    return new LocationDomain(
+      locationId,
+      locationDto.publish,
+      locationDto.address,
+      locationDto.city,
+      locationDto.country,
+      coordinates,
+      locationDto.time_zone,
+      new Date(locationDto.last_updated),
+      locationDto.name,
+      locationDto.postal_code,
+      locationDto.state,
+      locationDto.related_locations,
+      locationDto.parking_type,
+      undefined, // EVSEs - would need proper mapping from DTO
+      locationDto.directions,
+      locationDto.operator,
+      locationDto.suboperator,
+      locationDto.owner,
+      locationDto.facilities,
+      locationDto.opening_times,
+      locationDto.charging_when_closed,
+      locationDto.images,
+      locationDto.energy_mix,
+      locationDto.publish_allowed_to,
+    )
   }
 }

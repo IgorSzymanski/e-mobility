@@ -13,37 +13,59 @@ import { GeoLocation } from '@/domain/locations/value-objects/geo-location'
 import { Location as LocationDomain } from '@/domain/locations/location.aggregate'
 import { BusinessDetails } from '@/domain/locations/value-objects/business-details'
 import { Image } from '@/domain/locations/value-objects/image'
+import { OcpiContextService } from '@/ocpi/common/services/ocpi-context.service'
+import { Logger } from '@nestjs/common'
 
 export class LocationPrismaRepository implements LocationRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  private readonly logger = new Logger(LocationPrismaRepository.name)
+
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly contextService: OcpiContextService,
+  ) {}
+
+  /**
+   * Build base where clause with automatic party scoping
+   * All queries are automatically scoped to the authenticated party
+   */
+  private buildPartyWhereClause(
+    additionalFilter?: Partial<Prisma.OcpiLocationWhereInput>,
+  ): Prisma.OcpiLocationWhereInput {
+    const partyFilter = this.contextService.getPartyFilter()
+
+    this.logger.debug(
+      `Scoping location query to party: ${partyFilter.countryCode}*${partyFilter.partyId}`,
+    )
+
+    return {
+      countryCode: partyFilter.countryCode,
+      partyId: partyFilter.partyId,
+      ...additionalFilter,
+    }
+  }
 
   async findLocations(
     filter?: LocationFilter,
     pagination?: PaginationOptions,
   ): Promise<LocationListResult> {
-    const where: Prisma.OcpiLocationWhereInput = {}
-
-    if (filter?.countryCode) {
-      where.countryCode = filter.countryCode
-    }
-
-    if (filter?.partyId) {
-      where.partyId = filter.partyId
-    }
+    const additionalFilter: Partial<Prisma.OcpiLocationWhereInput> = {}
 
     if (filter?.publish !== undefined) {
-      where.publish = filter.publish
+      additionalFilter.publish = filter.publish
     }
 
     if (filter?.dateFrom || filter?.dateTo) {
-      where.lastUpdated = {}
+      additionalFilter.lastUpdated = {}
       if (filter.dateFrom) {
-        where.lastUpdated.gte = filter.dateFrom
+        additionalFilter.lastUpdated.gte = filter.dateFrom
       }
       if (filter.dateTo) {
-        where.lastUpdated.lt = filter.dateTo
+        additionalFilter.lastUpdated.lt = filter.dateTo
       }
     }
+
+    // Use party-scoped where clause
+    const where = this.buildPartyWhereClause(additionalFilter)
 
     const [locations, totalCount] = await Promise.all([
       this.prisma.ocpiLocation.findMany({
@@ -62,7 +84,9 @@ export class LocationPrismaRepository implements LocationRepository {
       this.prisma.ocpiLocation.count({ where }),
     ])
 
-    const domainLocations = locations.map(this.mapPrismaToDomain.bind(this))
+    const domainLocations = locations.map((location) =>
+      this.mapPrismaToDomain(location),
+    )
     const hasMore = pagination?.limit
       ? (pagination.offset || 0) + locations.length < totalCount
       : false
@@ -79,14 +103,13 @@ export class LocationPrismaRepository implements LocationRepository {
     partyId: string,
     locationId: string,
   ): Promise<Location | null> {
-    const location = await this.prisma.ocpiLocation.findUnique({
-      where: {
-        uq_location: {
-          countryCode,
-          partyId,
-          locationId,
-        },
-      },
+    // Validate that requested party matches authenticated party
+    this.contextService.validatePartyAccess(countryCode, partyId)
+
+    const where = this.buildPartyWhereClause({ locationId })
+
+    const location = await this.prisma.ocpiLocation.findFirst({
+      where,
       include: {
         evses: {
           include: {
@@ -105,6 +128,9 @@ export class LocationPrismaRepository implements LocationRepository {
     locationId: string,
     evseUid: string,
   ): Promise<EVSE | null> {
+    // Validate party access
+    this.contextService.validatePartyAccess(countryCode, partyId)
+
     const location = await this.findLocationById(
       countryCode,
       partyId,
@@ -122,6 +148,9 @@ export class LocationPrismaRepository implements LocationRepository {
     evseUid: string,
     connectorId: string,
   ): Promise<Connector | null> {
+    // Validate party access
+    this.contextService.validatePartyAccess(countryCode, partyId)
+
     const evse = await this.findEvse(countryCode, partyId, locationId, evseUid)
     if (!evse) return null
 
@@ -131,18 +160,17 @@ export class LocationPrismaRepository implements LocationRepository {
   }
 
   async saveLocation(location: Location): Promise<Location> {
+    // Validate that the location belongs to the authenticated party
+    this.contextService.validatePartyAccess(
+      location.id.countryCode,
+      location.id.partyId,
+    )
+
     const locationData = this.mapDomainToPrisma(location)
 
-    // Check if location already exists
-    const existing = await this.prisma.ocpiLocation.findUnique({
-      where: {
-        uq_location: {
-          countryCode: location.id.countryCode,
-          partyId: location.id.partyId,
-          locationId: location.id.id,
-        },
-      },
-    })
+    // Check if location already exists using party-scoped query
+    const where = this.buildPartyWhereClause({ locationId: location.id.id })
+    const existing = await this.prisma.ocpiLocation.findFirst({ where })
 
     if (existing) {
       // Update existing location
@@ -186,6 +214,9 @@ export class LocationPrismaRepository implements LocationRepository {
     locationId: string,
     evse: EVSE,
   ): Promise<Location> {
+    // Validate party access
+    this.contextService.validatePartyAccess(countryCode, partyId)
+
     // This would require more complex implementation with nested updates
     // For now, we'll get the location, update it in memory, and save it back
     const location = await this.findLocationById(
@@ -207,9 +238,14 @@ export class LocationPrismaRepository implements LocationRepository {
     countryCode: string,
     partyId: string,
     locationId: string,
-    evseUid: string,
-    connector: Connector,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _evseUid: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _connector: Connector,
   ): Promise<Location> {
+    // Validate party access
+    this.contextService.validatePartyAccess(countryCode, partyId)
+
     // Similar to updateEvse, would require complex nested updates
     // For this implementation, we'll use the domain model approach
     const location = await this.findLocationById(
@@ -233,13 +269,11 @@ export class LocationPrismaRepository implements LocationRepository {
     partyId: string,
     locationId: string,
   ): Promise<boolean> {
-    const count = await this.prisma.ocpiLocation.count({
-      where: {
-        countryCode,
-        partyId,
-        locationId,
-      },
-    })
+    // Validate party access
+    this.contextService.validatePartyAccess(countryCode, partyId)
+
+    const where = this.buildPartyWhereClause({ locationId })
+    const count = await this.prisma.ocpiLocation.count({ where })
     return count > 0
   }
 
@@ -259,23 +293,28 @@ export class LocationPrismaRepository implements LocationRepository {
     totalConnectors: number
     publishedLocations: number
   }> {
+    // Validate party access
+    this.contextService.validatePartyAccess(countryCode, partyId)
+
+    const partyFilter = this.contextService.getPartyFilter()
+
     const [totalLocations, publishedLocations, totalEvses, totalConnectors] =
       await Promise.all([
         this.prisma.ocpiLocation.count({
-          where: { countryCode, partyId },
+          where: partyFilter,
         }),
         this.prisma.ocpiLocation.count({
-          where: { countryCode, partyId, publish: true },
+          where: { ...partyFilter, publish: true },
         }),
         this.prisma.ocpiEvse.count({
           where: {
-            location: { countryCode, partyId },
+            location: partyFilter,
           },
         }),
         this.prisma.ocpiConnector.count({
           where: {
             evse: {
-              location: { countryCode, partyId },
+              location: partyFilter,
             },
           },
         }),
@@ -359,13 +398,15 @@ export class LocationPrismaRepository implements LocationRepository {
     )
   }
 
-  private mapDomainToPrisma(location: Location): any {
+  private mapDomainToPrisma(
+    location: Location,
+  ): Prisma.OcpiLocationCreateInput {
     return {
       countryCode: location.id.countryCode,
       partyId: location.id.partyId,
       locationId: location.id.id,
       publish: location.publish,
-      publishAllowedTo: location.publishAllowedTo,
+      publishAllowedTo: location.publishAllowedTo as unknown,
       name: location.name,
       address: location.address,
       city: location.city,
@@ -376,18 +417,18 @@ export class LocationPrismaRepository implements LocationRepository {
         latitude: location.coordinates.latitude,
         longitude: location.coordinates.longitude,
       },
-      relatedLocations: location.relatedLocations,
+      relatedLocations: location.relatedLocations as unknown,
       parkingType: location.parkingType,
       directions: location.directions,
-      operator: location.operator,
-      suboperator: location.suboperator,
-      owner: location.owner,
-      facilities: location.facilities || [],
+      operator: location.operator as unknown,
+      suboperator: location.suboperator as unknown,
+      owner: location.owner as unknown,
+      facilities: location.facilities ? (location.facilities as unknown[]) : [],
       timeZone: location.timeZone,
-      openingTimes: location.openingTimes,
+      openingTimes: location.openingTimes as unknown,
       chargingWhenClosed: location.chargingWhenClosed,
-      images: location.images,
-      energyMix: location.energyMix,
+      images: location.images as unknown,
+      energyMix: location.energyMix as unknown,
       lastUpdated: location.lastUpdated,
     }
   }
