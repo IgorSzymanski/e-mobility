@@ -11,9 +11,9 @@ export type ImageCategory =
   | 'OWNER'
 
 const ImageSchema = z.object({
-  url: z.string().url('Invalid image URL'),
+  url: z.url('Invalid image URL'),
   type: z.string().min(1, 'Image type cannot be empty').trim(),
-  thumbnail: z.string().url('Invalid thumbnail URL').optional(),
+  thumbnail: z.url('Invalid thumbnail URL').optional(),
   width: z.number().positive('Image width must be positive').optional(),
   height: z.number().positive('Image height must be positive').optional(),
 })

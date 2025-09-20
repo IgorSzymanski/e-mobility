@@ -1,10 +1,12 @@
 import { z } from 'zod'
 import type { Location } from '@/domain/locations/location.aggregate'
-import type { EVSE } from '@/domain/locations/entities/evse'
-import type { Connector } from '@/domain/locations/entities/connector'
 import { Location as LocationDomain } from '@/domain/locations/location.aggregate'
 import { LocationId } from '@/domain/locations/value-objects/location-id'
 import { GeoLocation } from '@/domain/locations/value-objects/geo-location'
+import { BusinessDetails } from '@/domain/locations/value-objects/business-details'
+import { Image } from '@/domain/locations/value-objects/image'
+import { EVSE } from '@/domain/locations/entities/evse'
+import { Connector } from '@/domain/locations/entities/connector'
 
 // OCPI 2.2.1 Capability enum
 export const CapabilitySchema = z.enum([
@@ -173,7 +175,7 @@ export const DisplayTextDtoSchema = z.object({
 // OCPI 2.2.1 BusinessDetails class
 export const BusinessDetailsDtoSchema = z.object({
   name: z.string().max(100),
-  website: z.string().url().optional(),
+  website: z.url().optional(),
   logo: z
     .object({
       url: z.string(),
@@ -188,8 +190,8 @@ export const BusinessDetailsDtoSchema = z.object({
 
 // OCPI 2.2.1 Image class
 export const ImageDtoSchema = z.object({
-  url: z.string().url(),
-  thumbnail: z.string().url().optional(),
+  url: z.url(),
+  thumbnail: z.url().optional(),
   category: ImageCategorySchema,
   type: z.string().max(4),
   width: z.number().int().max(99999).optional(),
@@ -273,7 +275,7 @@ export const ConnectorDtoSchema = z.object({
   max_amperage: z.number().int(),
   max_electric_power: z.number().int().optional(),
   tariff_ids: z.array(z.string().max(36)),
-  terms_and_conditions: z.string().url().optional(),
+  terms_and_conditions: z.url().optional(),
   last_updated: z.iso.datetime(),
 })
 
@@ -324,6 +326,134 @@ export const LocationDtoSchema = z.object({
   last_updated: z.iso.datetime(),
 })
 
+// --- Transform helpers: DTO → Domain VOs (Zod-powered) ---
+const GeoToDomainSchema = GeoLocationDtoSchema.transform(
+  (g) => new GeoLocation(g.latitude, g.longitude),
+)
+
+const ImageToDomainSchema = ImageDtoSchema.transform(
+  (img) =>
+    new Image(
+      img.url,
+      img.category,
+      img.type,
+      img.thumbnail,
+      img.width,
+      img.height,
+    ),
+)
+
+const BusinessDetailsToDomainSchema = BusinessDetailsDtoSchema.transform(
+  (b) =>
+    new BusinessDetails(
+      b.name,
+      b.website,
+      b.logo ? ImageToDomainSchema.parse(b.logo) : undefined,
+    ),
+)
+
+const RelatedLocationToDomainSchema = AdditionalGeoLocationDtoSchema.transform(
+  (rel) => ({
+    coordinates: new GeoLocation(rel.latitude, rel.longitude),
+    name: rel.name
+      ? { language: rel.name.language, text: rel.name.text }
+      : undefined,
+  }),
+)
+
+const EnergyMixToDomainSchema = EnergyMixDtoSchema.transform((e) => ({
+  isGreenEnergy: e.is_green_energy,
+  energySources: e.energy_sources?.map((source) => ({
+    source: source.source,
+    percentage: source.percentage,
+  })),
+  environImpact: e.environ_impact?.map((impact) => ({
+    category: impact.category,
+    amount: impact.amount,
+  })),
+  supplierName: e.supplier_name,
+  energyProductName: e.energy_product_name,
+}))
+
+// Connector DTO → Domain Connector (class-based)
+const ConnectorDtoToDomainSchema = ConnectorDtoSchema.transform(
+  (c) =>
+    new Connector(
+      c.id,
+      c.standard,
+      c.format,
+      c.power_type,
+      c.max_voltage,
+      c.max_amperage,
+      new Date(c.last_updated),
+      c.max_electric_power,
+      c.tariff_ids,
+      c.terms_and_conditions,
+    ),
+)
+
+// EVSE DTO → Domain EVSE (class-based)
+const EvseDtoToDomainSchema = EvseDtoSchema.transform(
+  (e) =>
+    new EVSE(
+      e.uid,
+      e.status,
+      e.connectors.map((c) => ConnectorDtoToDomainSchema.parse(c)),
+      new Date(e.last_updated),
+      e.evse_id,
+      e.status_schedule?.map((s) => ({
+        periodBegin: new Date(s.period_begin),
+        periodEnd: s.period_end ? new Date(s.period_end) : undefined,
+        status: s.status,
+      })),
+      e.capabilities,
+      e.floor_level,
+      e.coordinates ? GeoToDomainSchema.parse(e.coordinates) : undefined,
+      e.physical_reference,
+      e.directions?.map((d) => ({
+        language: d.language,
+        text: d.text,
+      })),
+      e.parking_restrictions,
+      e.images?.map((i) => ImageToDomainSchema.parse(i)),
+    ),
+)
+
+// Root transform: Location DTO → Domain Aggregate
+const LocationDtoToDomainSchema = LocationDtoSchema.transform((d) => {
+  const locationId = new LocationId(d.country_code, d.party_id, d.id)
+  const coordinates = GeoToDomainSchema.parse(d.coordinates)
+
+  return new LocationDomain(
+    locationId,
+    d.publish,
+    d.address,
+    d.city,
+    d.country,
+    coordinates,
+    d.time_zone,
+    new Date(d.last_updated),
+    d.name,
+    d.postal_code,
+    d.state,
+    d.related_locations?.map((rel) => RelatedLocationToDomainSchema.parse(rel)),
+    d.parking_type,
+    d.evses?.map((ev) => EvseDtoToDomainSchema.parse(ev)),
+    d.directions,
+    d.operator ? BusinessDetailsToDomainSchema.parse(d.operator) : undefined,
+    d.suboperator
+      ? BusinessDetailsToDomainSchema.parse(d.suboperator)
+      : undefined,
+    d.owner ? BusinessDetailsToDomainSchema.parse(d.owner) : undefined,
+    d.facilities,
+    d.opening_times,
+    d.charging_when_closed,
+    d.images?.map((img) => ImageToDomainSchema.parse(img)),
+    d.energy_mix ? EnergyMixToDomainSchema.parse(d.energy_mix) : undefined,
+    d.publish_allowed_to,
+  )
+})
+
 // Type exports for TypeScript
 export type CapabilityDto = z.infer<typeof CapabilitySchema>
 export type StatusDto = z.infer<typeof StatusSchema>
@@ -369,7 +499,7 @@ export class LocationMapper {
       publish: location.publish,
       publish_allowed_to: location.publishAllowedTo?.map((token) => ({
         uid: token.uid,
-        type: token.type as 'AD_HOC_USER' | 'APP_USER' | 'OTHER' | 'RFID',
+        type: token.type,
         visual_number: token.visualNumber,
         issuer: token.issuer,
         group_id: token.groupId,
@@ -394,7 +524,7 @@ export class LocationMapper {
             }
           : undefined,
       })),
-      parking_type: location.parkingType as ParkingTypeDto,
+      parking_type: location.parkingType,
       evses: location.evses?.map((evse) => this.mapEvseFromDomain(evse)),
       directions: location.directions?.map((dir) => ({
         language: dir.language,
@@ -408,7 +538,7 @@ export class LocationMapper {
               ? {
                   url: location.operator.logo.url,
                   thumbnail: location.operator.logo.thumbnail,
-                  category: location.operator.logo.category as ImageCategoryDto,
+                  category: location.operator.logo.category,
                   type: location.operator.logo.type,
                   width: location.operator.logo.width,
                   height: location.operator.logo.height,
@@ -424,8 +554,7 @@ export class LocationMapper {
               ? {
                   url: location.suboperator.logo.url,
                   thumbnail: location.suboperator.logo.thumbnail,
-                  category: location.suboperator.logo
-                    .category as ImageCategoryDto,
+                  category: location.suboperator.logo.category,
                   type: location.suboperator.logo.type,
                   width: location.suboperator.logo.width,
                   height: location.suboperator.logo.height,
@@ -441,7 +570,7 @@ export class LocationMapper {
               ? {
                   url: location.owner.logo.url,
                   thumbnail: location.owner.logo.thumbnail,
-                  category: location.owner.logo.category as ImageCategoryDto,
+                  category: location.owner.logo.category,
                   type: location.owner.logo.type,
                   width: location.owner.logo.width,
                   height: location.owner.logo.height,
@@ -449,7 +578,7 @@ export class LocationMapper {
               : undefined,
           }
         : undefined,
-      facilities: location.facilities as FacilityDto[],
+      facilities: location.facilities ? [...location.facilities] : undefined,
       time_zone: location.timeZone,
       opening_times: location.openingTimes
         ? {
@@ -475,7 +604,9 @@ export class LocationMapper {
       images: location.images?.map((image) => ({
         url: image.url,
         thumbnail: image.thumbnail,
-        category: image.category as ImageCategoryDto,
+        category: ImageCategorySchema.safeParse(image.category).success
+          ? image.category
+          : 'OTHER',
         type: image.type,
         width: image.width,
         height: image.height,
@@ -484,11 +615,11 @@ export class LocationMapper {
         ? {
             is_green_energy: location.energyMix.isGreenEnergy,
             energy_sources: location.energyMix.energySources?.map((source) => ({
-              source: source.source as EnergySourceDto['source'],
+              source: source.source,
               percentage: source.percentage,
             })),
             environ_impact: location.energyMix.environImpact?.map((impact) => ({
-              category: impact.category as EnvironmentalImpactDto['category'],
+              category: impact.category,
               amount: impact.amount,
             })),
             supplier_name: location.energyMix.supplierName,
@@ -503,13 +634,13 @@ export class LocationMapper {
     return {
       uid: evse.uid,
       evse_id: evse.evseId,
-      status: evse.status as StatusDto,
+      status: evse.status,
       status_schedule: evse.statusSchedule?.map((schedule) => ({
         period_begin: schedule.periodBegin.toISOString(),
         period_end: schedule.periodEnd?.toISOString(),
-        status: schedule.status as StatusDto,
+        status: schedule.status,
       })),
-      capabilities: evse.capabilities as CapabilityDto[],
+      capabilities: evse.capabilities ? [...evse.capabilities] : [],
       connectors: evse.connectors.map((connector) =>
         this.mapConnectorFromDomain(connector),
       ),
@@ -525,11 +656,13 @@ export class LocationMapper {
         language: dir.language,
         text: dir.text,
       })),
-      parking_restrictions: evse.parkingRestrictions as ParkingRestrictionDto[],
+      parking_restrictions: evse.parkingRestrictions
+        ? [...evse.parkingRestrictions]
+        : undefined,
       images: evse.images?.map((image) => ({
         url: image.url,
         thumbnail: image.thumbnail,
-        category: image.category as ImageCategoryDto,
+        category: image.category,
         type: image.type,
         width: image.width,
         height: image.height,
@@ -541,9 +674,9 @@ export class LocationMapper {
   private static mapConnectorFromDomain(connector: Connector): ConnectorDto {
     return {
       id: connector.id,
-      standard: connector.standard as ConnectorTypeDto,
-      format: connector.format as ConnectorFormatDto,
-      power_type: connector.powerType as PowerTypeDto,
+      standard: connector.standard,
+      format: connector.format,
+      power_type: connector.powerType,
       max_voltage: connector.maxVoltage,
       max_amperage: connector.maxAmperage,
       max_electric_power: connector.maxElectricPower,
@@ -554,42 +687,6 @@ export class LocationMapper {
   }
 
   static toDomain(locationDto: LocationDto): Location {
-    const locationId = new LocationId(
-      locationDto.country_code,
-      locationDto.party_id,
-      locationDto.id,
-    )
-
-    const coordinates = new GeoLocation(
-      locationDto.coordinates.latitude,
-      locationDto.coordinates.longitude,
-    )
-
-    return new LocationDomain(
-      locationId,
-      locationDto.publish,
-      locationDto.address,
-      locationDto.city,
-      locationDto.country,
-      coordinates,
-      locationDto.time_zone,
-      new Date(locationDto.last_updated),
-      locationDto.name,
-      locationDto.postal_code,
-      locationDto.state,
-      locationDto.related_locations,
-      locationDto.parking_type,
-      undefined, // EVSEs - would need proper mapping from DTO
-      locationDto.directions,
-      locationDto.operator,
-      locationDto.suboperator,
-      locationDto.owner,
-      locationDto.facilities,
-      locationDto.opening_times,
-      locationDto.charging_when_closed,
-      locationDto.images,
-      locationDto.energy_mix,
-      locationDto.publish_allowed_to,
-    )
+    return LocationDtoToDomainSchema.parse(locationDto)
   }
 }

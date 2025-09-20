@@ -13,6 +13,7 @@ const ConnectorSchema = z.object({
 
 export type ConnectorType =
   | 'CHADEMO'
+  | 'CHAOJI'
   | 'DOMESTIC_A'
   | 'DOMESTIC_B'
   | 'DOMESTIC_C'
@@ -25,6 +26,9 @@ export type ConnectorType =
   | 'DOMESTIC_J'
   | 'DOMESTIC_K'
   | 'DOMESTIC_L'
+  | 'DOMESTIC_M'
+  | 'DOMESTIC_N'
+  | 'DOMESTIC_O'
   | 'GBT_AC'
   | 'GBT_DC'
   | 'IEC_60309_2_single_16'
@@ -37,13 +41,25 @@ export type ConnectorType =
   | 'IEC_62196_T2_COMBO'
   | 'IEC_62196_T3A'
   | 'IEC_62196_T3C'
+  | 'NEMA_5_20'
+  | 'NEMA_6_30'
+  | 'NEMA_6_50'
+  | 'NEMA_10_30'
+  | 'NEMA_10_50'
+  | 'NEMA_14_30'
+  | 'NEMA_14_50'
   | 'PANTOGRAPH_BOTTOM_UP'
   | 'PANTOGRAPH_TOP_DOWN'
   | 'TESLA_R'
   | 'TESLA_S'
 
 export type ConnectorFormat = 'SOCKET' | 'CABLE'
-export type PowerType = 'AC_1_PHASE' | 'AC_3_PHASE' | 'DC'
+export type PowerType =
+  | 'AC_1_PHASE'
+  | 'AC_2_PHASE'
+  | 'AC_2_PHASE_SPLIT'
+  | 'AC_3_PHASE'
+  | 'DC'
 
 export class Connector {
   constructor(

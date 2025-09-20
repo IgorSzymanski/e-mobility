@@ -1,17 +1,24 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { LocationPrismaRepository } from './location-prisma.repository'
 import { PrismaClient } from '@prisma/client'
 import { Location } from '@/domain/locations/location.aggregate'
 import { LocationId } from '@/domain/locations/value-objects/location-id'
 import { GeoLocation } from '@/domain/locations/value-objects/geo-location'
+import { OcpiContextService } from '@/ocpi/common/services/ocpi-context.service'
 
 describe('LocationPrismaRepository', () => {
   let repository: LocationPrismaRepository
   let prisma: PrismaClient
+  let contextService: OcpiContextService
+
+  const mockContextService = {
+    getPartyFilter: vi.fn(() => ({ countryCode: 'NL', partyId: 'ABC' })),
+    validatePartyAccess: vi.fn(),
+  } as any
 
   beforeEach(() => {
     prisma = new PrismaClient()
-    repository = new LocationPrismaRepository(prisma)
+    contextService = mockContextService
+    repository = new LocationPrismaRepository(prisma, contextService)
   })
 
   afterEach(async () => {

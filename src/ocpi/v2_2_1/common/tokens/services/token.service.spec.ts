@@ -1,15 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import { TokenService } from './token.service'
-// import { TokenRepository } from '../repositories/token.repository'
-import { Token } from '../../../../domain/tokens/token.aggregate'
-import { TokenId } from '../../../../domain/tokens/value-objects/token-id'
-import { LocationReferences } from '../../../../domain/tokens/value-objects/location-references'
+import { Token } from '@/domain/tokens/token.aggregate'
+import { TokenId } from '@/domain/tokens/value-objects/token-id'
 import {
+  AllowedType,
   TokenType,
   WhitelistType,
-  AllowedType,
-} from '../../../../domain/tokens/enums/token-enums'
-import { OcpiUnknownTokenException } from '../../../../shared/exceptions/ocpi.exceptions'
+} from '@/domain/tokens/enums/token-enums'
+import { OcpiUnknownTokenException } from '@/shared/exceptions'
+import { LocationReferences } from '@/domain/tokens/value-objects/location-references'
 
 describe('TokenService', () => {
   let service: TokenService

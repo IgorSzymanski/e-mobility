@@ -38,7 +38,7 @@ describe('OcpiTokenValidationService', () => {
       const mockPeer = {
         countryCode: 'NL',
         partyId: 'TNM',
-        role: 'EMSP',
+        role: 'EMSP' as const,
         businessDetailsName: 'Test EMSP',
         businessDetailsWebsite: 'https://test-emsp.com',
       }
@@ -64,7 +64,7 @@ describe('OcpiTokenValidationService', () => {
       const mockPeer = {
         countryCode: 'DE',
         partyId: 'ABC',
-        role: 'CPO',
+        role: 'CPO' as const,
         businessDetailsName: 'Test CPO',
         businessDetailsWebsite: null,
       }

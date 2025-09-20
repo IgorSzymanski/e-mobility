@@ -3,9 +3,11 @@ import { PrismaClient } from '@prisma/client'
 import { PeersRepository } from './peers.repository'
 import { OcpiConfigService } from '@/shared/config/ocpi.config'
 import { TokenGenerator } from '@/infrastructure/security/token-generator'
-import type { CredentialsDto } from '@/ocpi/v2_2_1/credentials/dto/credentials.dto'
-import { CredentialsRoleSchema } from '@/ocpi/v2_2_1/credentials/dto/credentials.dto'
 import { z } from 'zod'
+import {
+  CredentialsDto,
+  CredentialsRoleSchema,
+} from '@/ocpi/v2_2_1/common/credentials/dto/credentials.dto'
 
 describe('PeersRepository Integration Tests', () => {
   let repository: PeersRepository

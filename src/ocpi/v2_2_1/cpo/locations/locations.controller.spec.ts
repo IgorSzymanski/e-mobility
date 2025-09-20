@@ -1,9 +1,13 @@
 /* eslint-disable @typescript-eslint/require-await */
 import { Test, TestingModule } from '@nestjs/testing'
+import { Reflector } from '@nestjs/core'
 import { LocationsController } from './locations.controller'
 import { LocationService } from '../../common/locations/services/location.service'
 import type { LocationRepository } from '../../common/locations/repositories/location.repository'
 import type { OcpiParty } from '@/ocpi/common/services/ocpi-token-validation.service'
+import { OcpiTokenValidationService } from '@/ocpi/common/services/ocpi-token-validation.service'
+import { BootstrapTokensService } from '@/admin/bootstrap-tokens/bootstrap-tokens.service'
+import { OcpiContextService } from '@/ocpi/common/services/ocpi-context.service'
 import { createOcpiSuccessResponse } from '../../common/ocpi-envelope'
 
 describe('CPO LocationsController', () => {
@@ -55,6 +59,32 @@ describe('CPO LocationsController', () => {
         {
           provide: 'LocationRepository',
           useValue: mockLocationRepository,
+        },
+        {
+          provide: Reflector,
+          useValue: {
+            getAllAndOverride: vi.fn(),
+            get: vi.fn(),
+          },
+        },
+        {
+          provide: OcpiTokenValidationService,
+          useValue: {
+            validateCredentialsToken: vi.fn(),
+          },
+        },
+        {
+          provide: BootstrapTokensService,
+          useValue: {
+            validateBootstrapTokenDetailed: vi.fn(),
+          },
+        },
+        {
+          provide: OcpiContextService,
+          useValue: {
+            getPartyFilter: vi.fn(),
+            validatePartyAccess: vi.fn(),
+          },
         },
       ],
     }).compile()

@@ -102,8 +102,7 @@ export class LocationPrismaRepository implements LocationRepository {
     )
 
     return {
-      countryCode: partyFilter.countryCode,
-      partyId: partyFilter.partyId,
+      ...partyFilter,
       ...additionalFilter,
     }
   }
@@ -128,8 +127,19 @@ export class LocationPrismaRepository implements LocationRepository {
       }
     }
 
-    // Use party-scoped where clause
-    const where = this.buildPartyWhereClause(additionalFilter)
+    // Handle country/party filtering
+    if (filter?.countryCode !== undefined) {
+      additionalFilter.countryCode = filter.countryCode
+    }
+    if (filter?.partyId !== undefined) {
+      additionalFilter.partyId = filter.partyId
+    }
+
+    // Use party-scoped where clause only if no explicit country/party filter is provided
+    const where =
+      filter?.countryCode !== undefined || filter?.partyId !== undefined
+        ? additionalFilter
+        : this.buildPartyWhereClause(additionalFilter)
 
     const [locations, totalCount] = await Promise.all([
       this.prisma.ocpiLocation.findMany({
