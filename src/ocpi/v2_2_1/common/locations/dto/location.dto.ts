@@ -485,6 +485,16 @@ export type ConnectorDto = z.infer<typeof ConnectorDtoSchema>
 export type EvseDto = z.infer<typeof EvseDtoSchema>
 export type LocationDto = z.infer<typeof LocationDtoSchema>
 
+// Export transform schemas for reuse
+export const ConnectorMapper = {
+  toDomain: (connectorDto: ConnectorDto) =>
+    ConnectorDtoToDomainSchema.parse(connectorDto),
+}
+
+export const EvseMapper = {
+  toDomain: (evseDto: EvseDto) => EvseDtoToDomainSchema.parse(evseDto),
+}
+
 // Location Mapper Functions
 export class LocationMapper {
   static fromDomain(

@@ -12,7 +12,10 @@ import { OcpiTokenValidationService } from '@/ocpi/common/services/ocpi-token-va
 import { BootstrapTokensService } from '@/admin/bootstrap-tokens/bootstrap-tokens.service'
 import { OcpiContextService } from '@/ocpi/common/services/ocpi-context.service'
 import { createOcpiSuccessResponse } from '../../common/ocpi-envelope'
-import { OcpiInvalidParametersException, OcpiUnknownLocationException } from '@/shared/exceptions/ocpi.exceptions'
+import {
+  OcpiInvalidParametersException,
+  OcpiUnknownLocationException,
+} from '@/shared/exceptions/ocpi.exceptions'
 
 describe('EMP LocationsController', () => {
   let controller: LocationsController

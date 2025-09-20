@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common'
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger'
 import { EmpLocationService } from '@/domain/locations/services/emp-location.service'
+import type { Location } from '@/domain/locations/location.aggregate'
 import type { LocationObjectQueryDto } from '../../common/locations/dto/location-query.dto'
 import type { OcpiResponse } from '../../common/ocpi-envelope'
 import type {
@@ -17,7 +18,11 @@ import type {
   EvseDto,
   ConnectorDto,
 } from '../../common/locations/dto/location.dto'
-import { LocationMapper } from '../../common/locations/dto/location.dto'
+import {
+  LocationMapper,
+  EvseMapper,
+  ConnectorMapper,
+} from '../../common/locations/dto/location.dto'
 import { createOcpiSuccessResponse } from '../../common/ocpi-envelope'
 import { OcpiAuthGuard } from '@/ocpi/common/guards/ocpi-auth.guard'
 import { OcpiContextInterceptor } from '@/ocpi/common/interceptors/ocpi-context.interceptor'
@@ -87,16 +92,15 @@ export class LocationsController {
     @Body() partialLocationDto: Partial<LocationDto>,
     @OcpiPartyParam() party: OcpiParty,
   ): Promise<OcpiResponse<LocationDto>> {
-    // Convert partial DTO to domain partial (this would need proper implementation)
-    // TODO: Implement proper partial mapping from DTO to domain
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const partialDomainData = partialLocationDto as any
+    // FIXME: Partial updates require complex mapping from DTO to domain objects
+    // For now, we pass the partial DTO directly as the service will handle primitive fields
+    // This works for simple field updates but doesn't handle complex nested objects properly
+    const partialDomainData = partialLocationDto as unknown as Partial<Location>
 
     // Delegate to domain service
     const updatedLocation = await this.empLocationService.updateLocationPartial(
       {
         locationId: params.location_id,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         partialData: partialDomainData,
         countryCode: party.countryCode,
         partyId: party.partyId,
@@ -125,9 +129,7 @@ export class LocationsController {
     @OcpiPartyParam() party: OcpiParty,
   ): Promise<OcpiResponse<LocationDto>> {
     // Convert DTO to domain EVSE object
-    // TODO: Implement EvseMapper.toDomain and proper EVSE type
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const evse = {} as any // Placeholder for EVSE domain object
+    const evse = EvseMapper.toDomain(evseDto)
 
     // Delegate to domain service
     const updatedLocation = await this.empLocationService.updateEvse({
@@ -135,7 +137,6 @@ export class LocationsController {
       partyId: party.partyId,
       locationId: params.location_id,
       evseUid: params.evse_uid,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       evse,
     })
 
@@ -162,9 +163,7 @@ export class LocationsController {
     @OcpiPartyParam() party: OcpiParty,
   ): Promise<OcpiResponse<LocationDto>> {
     // Convert DTO to domain Connector object
-    // TODO: Implement ConnectorMapper.toDomain and proper Connector type
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const connector = {} as any // Placeholder for Connector domain object
+    const connector = ConnectorMapper.toDomain(connectorDto)
 
     // Delegate to domain service
     const updatedLocation = await this.empLocationService.updateConnector({
@@ -173,7 +172,6 @@ export class LocationsController {
       locationId: params.location_id,
       evseUid: params.evse_uid,
       connectorId: params.connector_id,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       connector,
     })
 
